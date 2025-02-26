@@ -141,21 +141,17 @@ async function fetchMetalPrices() {
         }
 
         const data = await response.json();
-        console.log("API 응답 데이터:", data); // 🟢 API 응답 로그 확인
+        console.log("📢 API 응답 데이터:", data); // 🟢 API 응답 로그 확인
 
-        // ✅ 응답 데이터 검증
+        // ✅ 응답 데이터 검증 (비어 있을 경우 오류 방지)
         if (!data || Object.keys(data).length === 0) {
             throw new Error("API 응답이 비어 있습니다.");
         }
 
-        // ✅ 금(Gold) 변환 (트로이 온스 -> 1g 가격 변환)
-        const goldPrice = data.gold?.krw > 0 ? (1 / data.gold.krw) / 31.1035 : 92000;
-
-        // ✅ 은(Silver) 변환 (온스 기준 가격을 1g으로 변환)
-        let silverPrice = data.silver?.krw > 0 ? (1 / data.silver.krw) / 31.1035 : 1100;
-
-        // ✅ 백금(Platinum) 값이 없는 경우 기본값 설정
-        const platinumPrice = data.platinum?.krw > 0 ? (1 / data.platinum.krw) : 35000;
+        // ✅ gold, silver, platinum이 undefined일 경우 대비하여 기본값 설정
+        const goldPrice = data.gold?.krw > 0 ? (1 / data.gold.krw) / 31.1035 : 92000; // 기본값 92,000원
+        const silverPrice = data.silver?.krw > 0 ? (1 / data.silver.krw) / 31.1035 : 1100; // 기본값 1,100원
+        const platinumPrice = data.platinum?.krw > 0 ? (1 / data.platinum.krw) : 35000; // 기본값 35,000원
 
         // ✅ 변환된 금속 가격 저장
         const metalPrices = { gold: goldPrice, silver: silverPrice, platinum: platinumPrice };
@@ -173,6 +169,7 @@ async function fetchMetalPrices() {
         document.getElementById("gold-rates").appendChild(errorDiv);
     }
 }
+
 
 
 
