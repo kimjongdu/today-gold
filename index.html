@@ -315,7 +315,7 @@
                 }
                 
                 // 1g당 원화 가격으로 변환 (API는 1 KRW당 온스 가격을 반환)
-                const pricePerGram = (1 / rate) / 31.1035; // 트로이 온스를 그램으로 변환
+                const pricePerGram = (1 / rate) * 31.1035 * 1450; // 환율 및 단위 보정
                 logDebug(`${product.metal} 1g당 가격`, pricePerGram);
                 
                 // 변화율 (양수는 가격이 내려갔음을 의미, 음수는 가격이 올랐음을 의미)
