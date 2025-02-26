@@ -143,24 +143,34 @@ async function fetchMetalPrices() {
         const data = await response.json();
         console.log("API 응답 데이터:", data); // 🟢 API 응답 로그 확인
 
-        // ✅ API 응답 데이터가 비어 있는 경우 처리
+        // ✅ 응답 데이터 검증
         if (!data || Object.keys(data).length === 0) {
             throw new Error("API 응답이 비어 있습니다.");
         }
 
-        // ✅ gold, silver 가격 변환 (온스 → 1g 기준으로 조정)
+        // ✅ 금(Gold) 변환 (트로이 온스 -> 1g 가격 변환)
         const goldPrice = data.gold?.krw > 0 ? (1 / data.gold.krw) / 31.1035 : 92000;
-        const silverPrice = data.silver?.krw > 0 ? (1 / data.silver.krw) / 31.1035 : 1100;
+
+        // ✅ 은(Silver) 변환 (온스 기준 가격을 1g으로 변환)
+        let silverPrice = data.silver?.krw > 0 ? (1 / data.silver.krw) / 31.1035 : 1100;
+
+        // ✅ 백금(Platinum) 값이 없는 경우 기본값 설정
         const platinumPrice = data.platinum?.krw > 0 ? (1 / data.platinum.krw) : 35000;
 
-        // ✅ 변환된 금속 가격 출력
+        // ✅ 변환된 금속 가격 저장
         const metalPrices = { gold: goldPrice, silver: silverPrice, platinum: platinumPrice };
         console.log("📢 보정된 금속 가격:", metalPrices);
 
+        // ✅ 기존 HTML 형태 유지하며 데이터 업데이트
         renderGoldRates(metalPrices);
     } catch (error) {
         console.error("🚨 API 호출 오류:", error);
-        document.getElementById("gold-rates").innerHTML = "<div class='error'>데이터를 불러올 수 없습니다.</div>";
+
+        // 기존 UI를 유지하면서 오류 메시지만 추가
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "error";
+        errorDiv.textContent = "데이터를 불러올 수 없습니다.";
+        document.getElementById("gold-rates").appendChild(errorDiv);
     }
 }
 
