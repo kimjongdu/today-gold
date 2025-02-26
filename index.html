@@ -110,6 +110,17 @@
             padding: 20px;
             color: #ff4c4c;
         }
+        #debug-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #333;
+            border: 1px solid #555;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #0f0;
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -130,11 +141,45 @@
         
         <div class="footer">
             <p>※ 시세는 시장 상황에 따라 예고 없이 변동될 수 있습니다.</p>
-            <p>※ 데이터 출처: CoinGecko API</p>
+            <p>※ 데이터 출처: 직접 입력 데이터</p>
         </div>
+        
+        <!-- 디버깅 정보 표시 영역 -->
+        <div id="debug-info"></div>
     </div>
 
     <script>
+        // 디버깅 로그 함수
+        function debugLog(message, data) {
+            const debugEl = document.getElementById('debug-info');
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            let logMessage = `[${timestamp}] ${message}\n`;
+            
+            if (data) {
+                logMessage += JSON.stringify(data, null, 2) + "\n\n";
+            } else {
+                logMessage += "\n";
+            }
+            
+            debugEl.textContent += logMessage;
+        }
+        
+        // 하드코딩된 고정 데이터 (안정적인 표시를 위해)
+        const fixedData = {
+            gold: {
+                price: 91500,  // 1g당 원화 가격
+                change: -0.5   // 변화율 (%)
+            },
+            silver: {
+                price: 1050,
+                change: -0.3
+            },
+            platinum: {
+                price: 32500,
+                change: -0.2
+            }
+        };
+
         // 금 제품별 기본 정보
         const goldProducts = [
             {
@@ -183,25 +228,6 @@
             }
         ];
 
-        // 백업 데이터 (API 실패 시 사용)
-        const backupData = {
-            gold: {
-                krw: 91500,
-                krw_24h_change: -0.5
-            },
-            silver: {
-                krw: 1050,
-                krw_24h_change: -0.3
-            },
-            platinum: {
-                krw: 32500,
-                krw_24h_change: -0.2
-            }
-        };
-
-        // 최근 가격 데이터 저장용 객체
-        let previousPrices = {};
-
         // 숫자 형식 지정 (천 단위 콤마)
         function formatNumber(num) {
             return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -219,84 +245,29 @@
             return `${year}.${month}.${day} ${hours}:${minutes}`;
         }
 
-        // API에서 금속 가격 가져오기
-        async function fetchMetalPrices() {
-            try {
-                // CORS 프록시를 통한 API 호출
-                const corsProxy = 'https://corsproxy.io/?';
-                const apiUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=gold,silver,platinum&vs_currencies=krw&include_24hr_change=true';
-                
-                const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
-                const data = await response.json();
-                
-                if (data && data.gold && data.silver) {
-                    // 이전 가격 데이터 저장
-                    const oldPrices = { ...previousPrices };
-                    
-                    // 새 가격 데이터 변환 및 저장
-                    const metalPrices = {};
-                    
-                    // 금 가격 (1g당 원화)
-                    metalPrices.gold = data.gold.krw;
-                    
-                    // 은 가격 (1g당 원화)
-                    metalPrices.silver = data.silver.krw;
-                    
-                    // 백금 가격 (1g당 원화, 백금 데이터가 없을 경우 금 가격의 1.2배로 추정)
-                    metalPrices.platinum = data.platinum ? data.platinum.krw : data.gold.krw * 1.2;
-                    
-                    // 변화율 저장
-                    const changes = {
-                        gold: data.gold.krw_24h_change || 0,
-                        silver: data.silver.krw_24h_change || 0,
-                        platinum: data.platinum ? data.platinum.krw_24h_change : 0
-                    };
-                    
-                    // 이전 가격 업데이트
-                    previousPrices = { ...metalPrices };
-                    
-                    // 날짜 업데이트
-                    document.getElementById('last-updated').textContent = getCurrentDateTime();
-                    
-                    // 시세 정보 표시
-                    renderGoldRates(metalPrices, changes);
-                } else {
-                    throw new Error('API 응답에 필요한 데이터가 없습니다');
-                }
-            } catch (error) {
-                console.error('금속 가격 가져오기 실패:', error);
-                
-                // 백업 데이터 사용
-                const metalPrices = {
-                    gold: backupData.gold.krw,
-                    silver: backupData.silver.krw,
-                    platinum: backupData.platinum.krw
-                };
-                
-                const changes = {
-                    gold: backupData.gold.krw_24h_change,
-                    silver: backupData.silver.krw_24h_change,
-                    platinum: backupData.platinum.krw_24h_change
-                };
-                
-                // 날짜 업데이트 (백업 데이터 사용 표시)
-                document.getElementById('last-updated').textContent = getCurrentDateTime() + ' (백업 데이터)';
-                
-                // 시세 정보 표시
-                renderGoldRates(metalPrices, changes);
-            }
-        }
-
         // 시세 정보 렌더링
-        function renderGoldRates(prices, changes) {
+        function renderGoldRates() {
+            debugLog('renderGoldRates 시작', fixedData);
+            
             const container = document.getElementById('gold-rates');
             container.innerHTML = '';
+            
+            // 날짜 업데이트
+            document.getElementById('last-updated').textContent = getCurrentDateTime();
             
             // 각 제품별 시세 표시
             goldProducts.forEach(function(product) {
                 // 가격 계산
-                const metalPrice = prices[product.apiId] || 0;
-                const priceChange = changes[product.apiId] || 0;
+                const metalData = fixedData[product.apiId];
+                debugLog(`제품 처리: ${product.metal}`, metalData);
+                
+                if (!metalData) {
+                    debugLog(`${product.apiId} 데이터 없음`, null);
+                    return;
+                }
+                
+                const metalPrice = metalData.price || 0;
+                const priceChange = metalData.change || 0;
                 
                 // 행 생성
                 const row = document.createElement('div');
@@ -328,6 +299,14 @@
                 buyDiv.className = 'buy-price';
                 
                 const buyPrice = metalPrice * 3.75 * product.purityFactor * product.vatFactor;
+                debugLog(`${product.metal} 매수가 계산:`, { 
+                    metalPrice: metalPrice,
+                    weight: 3.75,
+                    purityFactor: product.purityFactor,
+                    vatFactor: product.vatFactor,
+                    result: buyPrice
+                });
+                
                 const buyPriceP = document.createElement('p');
                 buyPriceP.className = 'price-value';
                 buyPriceP.textContent = formatNumber(buyPrice) + '원';
@@ -347,6 +326,14 @@
                 sellDiv.className = 'sell-price';
                 
                 const sellPrice = metalPrice * 3.75 * product.purityFactor * product.sellFactor;
+                debugLog(`${product.metal} 매도가 계산:`, { 
+                    metalPrice: metalPrice,
+                    weight: 3.75,
+                    purityFactor: product.purityFactor,
+                    sellFactor: product.sellFactor,
+                    result: sellPrice
+                });
+                
                 const sellPriceP = document.createElement('p');
                 sellPriceP.className = 'price-value';
                 sellPriceP.textContent = formatNumber(sellPrice) + '원';
@@ -371,15 +358,15 @@
                 row.appendChild(sellDiv);
                 container.appendChild(row);
             });
+            
+            debugLog('renderGoldRates 완료', null);
         }
 
-        // 초기화 및 주기적 업데이트
+        // 초기화
         document.addEventListener('DOMContentLoaded', function() {
-            // 초기 데이터 로드
-            fetchMetalPrices();
-            
-            // 5분마다 업데이트
-            setInterval(fetchMetalPrices, 5 * 60 * 1000);
+            debugLog('페이지 로드됨', null);
+            // 하드코딩된 데이터로 렌더링
+            renderGoldRates();
         });
     </script>
 </body>
