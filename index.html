@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -185,6 +183,22 @@
             }
         ];
 
+        // 백업 데이터 (API 실패 시 사용)
+        const backupData = {
+            gold: {
+                krw: 91500,
+                krw_24h_change: -0.5
+            },
+            silver: {
+                krw: 1050,
+                krw_24h_change: -0.3
+            },
+            platinum: {
+                krw: 32500,
+                krw_24h_change: -0.2
+            }
+        };
+
         // 최근 가격 데이터 저장용 객체
         let previousPrices = {};
 
@@ -208,10 +222,11 @@
         // API에서 금속 가격 가져오기
         async function fetchMetalPrices() {
             try {
-                // CoinGecko API로부터 금속 시세 데이터 가져오기 (API 키 필요 없음)
+                // CORS 프록시를 통한 API 호출
+                const corsProxy = 'https://corsproxy.io/?';
                 const apiUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=gold,silver,platinum&vs_currencies=krw&include_24hr_change=true';
                 
-                const response = await fetch(apiUrl);
+                const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
                 const data = await response.json();
                 
                 if (data && data.gold && data.silver) {
@@ -251,14 +266,24 @@
             } catch (error) {
                 console.error('금속 가격 가져오기 실패:', error);
                 
-                // 오류 시 기본 데이터로 렌더링 (이전 데이터가 있으면 사용)
-                if (Object.keys(previousPrices).length > 0) {
-                    const zeroChanges = {gold: 0, silver: 0, platinum: 0};
-                    renderGoldRates(previousPrices, zeroChanges);
-                } else {
-                    document.getElementById('gold-rates').innerHTML = 
-                        '<div class="error">데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
-                }
+                // 백업 데이터 사용
+                const metalPrices = {
+                    gold: backupData.gold.krw,
+                    silver: backupData.silver.krw,
+                    platinum: backupData.platinum.krw
+                };
+                
+                const changes = {
+                    gold: backupData.gold.krw_24h_change,
+                    silver: backupData.silver.krw_24h_change,
+                    platinum: backupData.platinum.krw_24h_change
+                };
+                
+                // 날짜 업데이트 (백업 데이터 사용 표시)
+                document.getElementById('last-updated').textContent = getCurrentDateTime() + ' (백업 데이터)';
+                
+                // 시세 정보 표시
+                renderGoldRates(metalPrices, changes);
             }
         }
 
@@ -310,7 +335,7 @@
                 
                 const buyChangeP = document.createElement('p');
                 const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
-                buyChangeP.className = `price-change ${changeClass}`;
+                buyChangeP.className = 'price-change ' + changeClass;
                 
                 const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
                 const diffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
@@ -328,7 +353,7 @@
                 sellDiv.appendChild(sellPriceP);
                 
                 const sellChangeP = document.createElement('p');
-                sellChangeP.className = `price-change ${changeClass}`;
+                sellChangeP.className = 'price-change ' + changeClass;
                 
                 const sellDiffAmount = Math.abs(Math.round(sellPrice * priceChange / 100 / 1000) * 1000);
                 sellChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(sellDiffAmount);
@@ -356,40 +381,6 @@
             // 5분마다 업데이트
             setInterval(fetchMetalPrices, 5 * 60 * 1000);
         });
-
-// API 연결 실패 시 사용할 백업 데이터
-const backupData = {
-    "gold": {
-        "krw": 91500,
-        "krw_24h_change": -0.5
-    },
-    "silver": {
-        "krw": 1050,
-        "krw_24h_change": -0.3
-    },
-    "platinum": {
-        "krw": 32500,
-        "krw_24h_change": -0.2
-    }
-};
-
-// API에서 금속 가격 가져오기
-async function fetchMetalPrices() {
-    try {
-        // API 호출 코드...
-    } catch (error) {
-        console.error('금속 가격 가져오기 실패:', error);
-        // 백업 데이터 사용
-        renderGoldRates(backupData, {
-            gold: backupData.gold.krw_24h_change,
-            silver: backupData.silver.krw_24h_change,
-            platinum: backupData.platinum.krw_24h_change
-        });
-        
-        document.getElementById('last-updated').textContent = 
-            getCurrentDateTime() + ' (백업 데이터)';
-    }
-}        
     </script>
 </body>
 </html>
