@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -354,6 +356,40 @@
             // 5분마다 업데이트
             setInterval(fetchMetalPrices, 5 * 60 * 1000);
         });
+
+// API 연결 실패 시 사용할 백업 데이터
+const backupData = {
+    "gold": {
+        "krw": 91500,
+        "krw_24h_change": -0.5
+    },
+    "silver": {
+        "krw": 1050,
+        "krw_24h_change": -0.3
+    },
+    "platinum": {
+        "krw": 32500,
+        "krw_24h_change": -0.2
+    }
+};
+
+// API에서 금속 가격 가져오기
+async function fetchMetalPrices() {
+    try {
+        // API 호출 코드...
+    } catch (error) {
+        console.error('금속 가격 가져오기 실패:', error);
+        // 백업 데이터 사용
+        renderGoldRates(backupData, {
+            gold: backupData.gold.krw_24h_change,
+            silver: backupData.silver.krw_24h_change,
+            platinum: backupData.platinum.krw_24h_change
+        });
+        
+        document.getElementById('last-updated').textContent = 
+            getCurrentDateTime() + ' (백업 데이터)';
+    }
+}        
     </script>
 </body>
 </html>
