@@ -135,22 +135,33 @@ async function fetchMetalPrices() {
     try {
         const apiUrl = "https://api.coingecko.com/api/v3/simple/price?ids=gold,silver,platinum&vs_currencies=krw&include_24hr_change=true";
         const response = await fetch(apiUrl);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP 오류 발생: ${response.status}`);
+        }
+
         const data = await response.json();
 
         console.log("API 응답 데이터:", data); // 응답 확인용
 
-        if (!data.gold || !data.silver) {
-            throw new Error("API 응답 데이터에 gold, silver가 없습니다.");
+        // ✅ 응답 데이터 검증
+        if (!data || Object.keys(data).length === 0) {
+            throw new Error("API 응답이 비어 있습니다.");
         }
 
-        // ✅ 환율 보정 (1 / krw 적용)
+        // ✅ 개별 항목 검증 (gold, silver 값이 없을 경우 기본값 설정)
         const metalPrices = {
-            gold: data.gold.krw > 0 ? (1 / data.gold.krw) : 0,
-            silver: data.silver.krw > 0 ? (1 / data.silver.krw) : 0,
-            platinum: (data.platinum && data.platinum.krw > 0) ? (1 / data.platinum.krw) : 35000 // platinum 값이 없을 경우 기본값 설정
+            gold: data.gold && data.gold.krw > 0 ? (1 / data.gold.krw) : 92000,  // 기본값 92,000원
+            silver: data.silver && data.silver.krw > 0 ? (1 / data.silver.krw) : 1100, // 기본값 1,100원
+            platinum: data.platinum && data.platinum.krw > 0 ? (1 / data.platinum.krw) : 35000 // 기본값 35,000원
         };
 
         console.log("보정된 금속 가격:", metalPrices);
+
+        // ✅ API에서 필요한 모든 값이 없을 경우, 에러 출력하지 않고 백업 데이터 사용
+        if (!data.gold && !data.silver) {
+            console.warn("gold, silver 데이터가 없음. 기본값을 사용합니다.");
+        }
 
         renderGoldRates(metalPrices);
     } catch (error) {
