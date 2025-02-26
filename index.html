@@ -132,7 +132,6 @@ fetchMetalPrices()<!DOCTYPE html>
         let previousPrices = {};
         
 async function fetchMetalPrices() {
-    console.log("🔴 fetchMetalPrices() 실행됨"); // 실행 여부 확인
     try {
         const apiUrl = "https://api.coingecko.com/api/v3/simple/price?ids=gold,silver,platinum&vs_currencies=krw&include_24hr_change=true";
         const response = await fetch(apiUrl);
@@ -157,12 +156,42 @@ async function fetchMetalPrices() {
         const metalPrices = { gold: goldPrice, silver: silverPrice, platinum: platinumPrice };
         console.log("📢 보정된 금속 가격:", metalPrices);
 
-        renderGoldRates(metalPrices);
+        // ✅ renderGoldRates 함수 존재 여부 확인 후 실행
+        if (typeof renderGoldRates === "function") {
+            renderGoldRates(metalPrices);
+        } else {
+            console.error("🚨 renderGoldRates 함수가 정의되지 않음.");
+        }
     } catch (error) {
         console.error("🚨 API 호출 오류:", error);
         document.getElementById("gold-rates").innerHTML = "<div class='error'>데이터를 불러올 수 없습니다.</div>";
     }
 }
+
+// ✅ 금속 시세를 HTML에 렌더링하는 함수
+function renderGoldRates(metalPrices) {
+    const container = document.getElementById("gold-rates");
+
+    // 기존 데이터를 지우고 새 데이터 추가
+    container.innerHTML = "";
+
+    Object.keys(metalPrices).forEach((key) => {
+        const value = metalPrices[key];
+        const row = document.createElement("div");
+        row.className = "metal-row";
+        row.innerHTML = `<strong>${key.toUpperCase()}</strong>: ${value.toLocaleString()} 원`;
+        container.appendChild(row);
+    });
+
+    console.log("✅ 금속 시세가 정상적으로 렌더링됨.");
+}
+
+// ✅ 페이지가 로드될 때 실행
+document.addEventListener("DOMContentLoaded", () => {
+    console.log("🟢 DOMContentLoaded 실행됨");
+    fetchMetalPrices();
+});
+
 
 // ✅ 페이지가 로드될 때 함수 실행 확인
 document.addEventListener("DOMContentLoaded", () => {
