@@ -346,6 +346,59 @@
             // 5분마다 업데이트 (300000ms)
             setInterval(fetchMetalPrices, 300000);
         });
+
+catch (error) {
+    console.error('API 호출 오류:', error);
+    
+    // 백업 데이터
+    const backupRates = {
+        XAU: 0.000030, // 금
+        XAG: 0.002700, // 은
+        XPT: 0.000087  // 백금
+    };
+    
+    // 오류 상황에서 백업 데이터 사용
+    document.getElementById('last-updated').textContent = getCurrentDateTime() + ' (백업 데이터)';
+    renderGoldRates(backupRates, backupRates);
+}
+
+
+
+// API 호출 성공 시 로컬 스토리지에 저장
+if (data.success) {
+    // 날짜 업데이트
+    document.getElementById('last-updated').textContent = getCurrentDateTime();
+    
+    // 변화율 계산을 위해 이전 데이터 저장
+    const oldRates = { ...previousRates };
+    previousRates = { ...data.rates };
+    
+    // 로컬 스토리지에 데이터 저장
+    localStorage.setItem('metalRates', JSON.stringify(data.rates));
+    localStorage.setItem('lastUpdated', getCurrentDateTime());
+    
+    // 시세 정보 표시
+    renderGoldRates(data.rates, oldRates);
+}
+
+// API 호출 실패 시 로컬 스토리지에서 데이터 불러오기
+catch (error) {
+    console.error('API 호출 오류:', error);
+    
+    // 로컬 스토리지에서 이전 데이터 가져오기
+    const savedRates = localStorage.getItem('metalRates');
+    const lastUpdated = localStorage.getItem('lastUpdated');
+    
+    if (savedRates) {
+        const rates = JSON.parse(savedRates);
+        document.getElementById('last-updated').textContent = lastUpdated + ' (저장된 데이터)';
+        renderGoldRates(rates, rates);
+    } else {
+        document.getElementById('gold-rates').innerHTML = 
+            `<div class="error">데이터를 불러올 수 없습니다: ${error.message}</div>`;
+    }
+}        
+        
     </script>
 </body>
 </html>
