@@ -176,39 +176,41 @@ async function fetchMetalPrices() {
 
 
 
+async function fetchMetalPrices() {
+    try {
+        const apiUrl = "https://api.coingecko.com/api/v3/simple/price?ids=gold,silver,platinum&vs_currencies=krw&include_24hr_change=true";
+        const response = await fetch(apiUrl);
 
+        console.log("📢 HTTP 상태 코드:", response.status); // HTTP 응답 상태 확인
 
-        function renderGoldRates(prices, changes) {
-            const container = document.getElementById('gold-rates');
-            container.innerHTML = '';
-
-            goldProducts.forEach(product => {
-                const metalPrice = prices[product.apiId] || 0;
-                const priceChange = changes[product.apiId] || 0;
-                const buyPrice = metalPrice * 3.75 * product.purityFactor * product.vatFactor;
-                const sellPrice = metalPrice * 3.75 * product.purityFactor * product.sellFactor;
-                const changeClass = priceChange < 0 ? 'down' : priceChange > 0 ? 'up' : 'no-change';
-                const arrow = priceChange < 0 ? '▼' : priceChange > 0 ? '▲' : '-';
-
-                const row = `
-                    <div class="metal-row">
-                        <div class="metal-info">
-                            <p class="metal-name">${product.metal}</p>
-                            <p class="metal-spec">${product.spec}</p>
-                        </div>
-                        <div class="buy-price">
-                            <p class="price-value">${buyPrice.toLocaleString()}원</p>
-                            <p class="price-change ${changeClass}">${priceChange.toFixed(2)}% ${arrow}</p>
-                        </div>
-                        <div class="sell-price">
-                            <p class="price-value">${sellPrice.toLocaleString()}원</p>
-                            <p class="price-change ${changeClass}">${priceChange.toFixed(2)}% ${arrow}</p>
-                        </div>
-                    </div>
-                `;
-                container.innerHTML += row;
-            });
+        if (!response.ok) {
+            throw new Error(`HTTP 오류 발생: ${response.status}`);
         }
+
+        const data = await response.json();
+        console.log("📢 API 응답 데이터:", data); // 🟢 API 응답 로그 확인
+
+        if (!data || Object.keys(data).length === 0) {
+            throw new Error("API 응답이 비어 있습니다.");
+        }
+
+        const goldPrice = data.gold?.krw > 0 ? (1 / (data.gold.krw * 31.1035)) : 92000;
+        const silverPrice = data.silver?.krw > 0 ? (1 / (data.silver.krw * 31.1035)) : 1100;
+        const platinumPrice = data.platinum?.krw > 0 ? (1 / data.platinum.krw) : 35000;
+
+        const metalPrices = { gold: goldPrice, silver: silverPrice, platinum: platinumPrice };
+        console.log("📢 보정된 금속 가격:", metalPrices);
+
+        renderGoldRates(metalPrices);
+    } catch (error) {
+        console.error("🚨 API 호출 오류:", error);
+        document.getElementById("gold-rates").innerHTML = "<div class='error'>데이터를 불러올 수 없습니다.</div>";
+    }
+}
+
+
+
+        
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchMetalPrices();
