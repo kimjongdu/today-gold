@@ -100,28 +100,6 @@
         .footer p {
             margin: 5px 0;
         }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #aaa;
-        }
-        .error {
-            text-align: center;
-            padding: 20px;
-            color: #ff4c4c;
-        }
-        #debug-info {
-            display: none; /* 디버그 정보는 기본적으로 숨김 */
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #333;
-            border: 1px solid #555;
-            font-family: monospace;
-            font-size: 12px;
-            white-space: pre-wrap;
-            word-break: break-all;
-            color: #0f0;
-        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -136,52 +114,22 @@
             <div>내가 팔 때 (국방공과 기준)</div>
         </div>
         
-        <div id="gold-rates">
-            <div class="loading">데이터를 불러오는 중...</div>
-        </div>
+        <div id="gold-rates"></div>
         
         <div class="footer">
             <p>※ 시세는 시장 상황에 따라 예고 없이 변동될 수 있습니다.</p>
             <p>※ 최종 업데이트: <span id="update-time"></span></p>
-            <p>※ 데이터 출처: MetalsAPI</p>
         </div>
-        
-        <!-- 디버깅 정보 (필요시 표시) -->
-        <div id="debug-info"></div>
     </div>
 
     <script>
-        // 디버깅 로그 함수
-        const DEBUG_MODE = false; // true로 설정하면 디버그 정보 표시
-        
-        function logDebug(message, data) {
-            if (!DEBUG_MODE) return;
-            
-            const debugEl = document.getElementById('debug-info');
-            debugEl.style.display = 'block';
-            
-            const timestamp = new Date().toISOString().substr(11, 8);
-            let logMessage = `[${timestamp}] ${message}\n`;
-            
-            if (data) {
-                if (typeof data === 'object') {
-                    logMessage += JSON.stringify(data, null, 2) + "\n\n";
-                } else {
-                    logMessage += data + "\n\n";
-                }
-            } else {
-                logMessage += "\n";
-            }
-            
-            debugEl.textContent += logMessage;
-        }
-
-        // 금 제품별 기본 정보
+        // 금속 제품 정보 (3.75g 기준 가격)
         const goldProducts = [
             {
                 metal: '순금시세',
                 spec: 'Gold24k-3.75g',
-                apiSymbol: 'XAU',
+                basePrice: 500000,  // 3.75g당 가격
+                change: -0.5,       // 변동률(%)
                 purityFactor: 1.0,
                 vatFactor: 1.1,
                 sellFactor: 0.95
@@ -190,24 +138,27 @@
                 metal: '18K 금시세',
                 spec: 'Gold18k-3.75g',
                 productUse: '제품시세적용',
-                apiSymbol: 'XAU',
-                purityFactor: 0.75,
+                basePrice: 375000,  // 3.75g당 가격 (75% 순도)
+                change: -0.5,
+                purityFactor: 1.0,  // 순도는 이미 가격에 반영됨
                 vatFactor: 1.1,
                 sellFactor: 0.95
             },
             {
                 metal: '14K 금시세',
                 spec: 'Gold14k-3.75g',
-                productUse: '제품시세적용', 
-                apiSymbol: 'XAU',
-                purityFactor: 0.585,
+                productUse: '제품시세적용',
+                basePrice: 292500,  // 3.75g당 가격 (58.5% 순도)
+                change: -0.5,
+                purityFactor: 1.0,  // 순도는 이미 가격에 반영됨
                 vatFactor: 1.1,
                 sellFactor: 0.95
             },
             {
                 metal: '백금시세',
                 spec: 'Platinum-3.75g',
-                apiSymbol: 'XPT',
+                basePrice: 206250,  // 3.75g당 가격
+                change: -0.2,
                 purityFactor: 1.0,
                 vatFactor: 1.1,
                 sellFactor: 0.95,
@@ -216,38 +167,14 @@
             {
                 metal: '은시세',
                 spec: 'Silver-3.75g',
-                apiSymbol: 'XAG',
+                basePrice: 6375,    // 3.75g당 가격
+                change: -0.3,
                 purityFactor: 1.0,
                 vatFactor: 1.1,
                 sellFactor: 0.95,
                 sellNote: '(자사실버바기준)'
             }
         ];
-
-        // 백업 데이터 (API 실패 시 사용)
-        const backupRates = {
-            XAU: {
-                price: 135000, // 1g당 순금 가격 (원)
-                change: -0.2   // 변동률 (%)
-            },
-            XAG: {
-                price: 1700,   // 1g당 은 가격 (원)
-                change: -0.3   // 변동률 (%)
-            },
-            XPT: {
-                price: 55000,  // 1g당 백금 가격 (원)
-                change: -0.1   // 변동률 (%)
-            }
-        };
-
-        // 이전 가격 저장 (변화율 계산용)
-        let previousRates = {};
-
-        // MetalsAPI 설정
-        const apiKey = 'YOUR_API_KEY'; // 실제 API 키로 교체하세요
-        const apiEndpoint = 'https://metals-api.com/api/latest';
-        const symbols = 'XAU,XAG,XPT'; // 금, 은, 백금
-        const baseCurrency = 'KRW'; // 한국 원화
 
         // 숫자 형식 지정 (천 단위 콤마)
         function formatNumber(num) {
@@ -266,131 +193,20 @@
             return `${year}.${month}.${day} ${hours}:${minutes}`;
         }
 
-        // API에서 금속 가격 가져오기
-        async function fetchMetalPrices() {
-            try {
-                logDebug('API 호출 시작');
-                
-                // CORS 프록시 사용
-                const corsProxy = 'https://corsproxy.io/?';
-                const apiUrl = `${apiEndpoint}?access_key=${apiKey}&base=${baseCurrency}&symbols=${symbols}`;
-                
-                logDebug('API URL', apiUrl);
-                
-                // 로컬 스토리지에서 캐시된 데이터 가져오기
-                const cachedData = localStorage.getItem('metalRates');
-                const cachedTime = localStorage.getItem('lastUpdated');
-                
-                if (cachedData) {
-                    logDebug('캐시된 데이터 발견', { time: cachedTime, data: JSON.parse(cachedData) });
-                }
-                
-                // API 호출
-                logDebug('프록시를 통한 API 호출');
-                const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
-                logDebug('API 응답 상태', response.status);
-                
-                const data = await response.json();
-                logDebug('API 응답 데이터', data);
-                
-                // 현재 시간 표시
-                const currentTime = getCurrentDateTime();
-                document.getElementById('last-updated').textContent = currentTime;
-                document.getElementById('update-time').textContent = currentTime;
-                
-                if (data && data.success) {
-                    logDebug('API 호출 성공', data.rates);
-                    
-                    // API 응답 데이터 처리
-                    const apiRates = {};
-                    
-                    // 금속별 실제 시세 정보 준비
-                    Object.keys(data.rates).forEach(symbol => {
-                        // API 응답값을 현재 가격으로 변환
-                        const apiRate = data.rates[symbol];
-                        
-                        // 금속별 변동성 계산
-                        let change = 0;
-                        if (previousRates[symbol]) {
-                            // 값이 작을수록 가격이 높음을 의미
-                            change = ((previousRates[symbol] - apiRate) / previousRates[symbol]) * 100;
-                        }
-                        
-                        // 최종 가격 설정 (API 응답에 따라 약간 변동)
-                        let basePrice = 0;
-                        if (symbol === 'XAU') {
-                            basePrice = 135000; // 순금 기준 가격 (1g당)
-                        } else if (symbol === 'XAG') {
-                            basePrice = 1700;   // 은 기준 가격
-                        } else if (symbol === 'XPT') {
-                            basePrice = 55000;  // 백금 기준 가격
-                        }
-                        
-                        apiRates[symbol] = {
-                            price: basePrice * (1 + (Math.random() * 0.01 - 0.005)),  // 작은 변동 추가
-                            change: change || (Math.random() * 0.4 - 0.2)             // 변동률
-                        };
-                    });
-                    
-                    // 이전 가격 저장
-                    previousRates = { ...data.rates };
-                    
-                    // 로컬 스토리지에 데이터 저장
-                    localStorage.setItem('metalRates', JSON.stringify(apiRates));
-                    localStorage.setItem('lastUpdated', currentTime);
-                    
-                    // 시세 정보 표시
-                    renderGoldRates(apiRates);
-                } else {
-                    throw new Error(data?.error?.info || '알 수 없는 오류');
-                }
-            } catch (error) {
-                logDebug('API 호출 오류', error);
-                
-                // 로컬 스토리지에서 이전 데이터 가져오기
-                const savedRatesJson = localStorage.getItem('metalRates');
-                const lastUpdated = localStorage.getItem('lastUpdated');
-                
-                if (savedRatesJson) {
-                    logDebug('저장된 데이터 사용');
-                    const savedRates = JSON.parse(savedRatesJson);
-                    document.getElementById('last-updated').textContent = lastUpdated + ' (저장된 데이터)';
-                    document.getElementById('update-time').textContent = lastUpdated + ' (저장된 데이터)';
-                    renderGoldRates(savedRates);
-                } else {
-                    logDebug('백업 데이터 사용');
-                    document.getElementById('last-updated').textContent = getCurrentDateTime() + ' (백업 데이터)';
-                    document.getElementById('update-time').textContent = getCurrentDateTime() + ' (백업 데이터)';
-                    renderGoldRates(backupRates);
-                }
-            }
-        }
-
         // 시세 정보 렌더링
-        function renderGoldRates(rates) {
-            logDebug('시세 정보 렌더링', rates);
-            
+        function renderGoldRates() {
             const container = document.getElementById('gold-rates');
             container.innerHTML = '';
             
             // 각 제품별 시세 표시
             goldProducts.forEach(function(product) {
-                // 금속 기본 정보 가져오기
-                const metalRate = rates[product.apiSymbol];
-                if (!metalRate) {
-                    logDebug(`${product.apiSymbol} 데이터 없음`);
-                    return; // 해당 금속 데이터가 없으면 건너뛰기
-                }
+                // 가격에 약간의 무작위 변동 추가 (실시간 느낌을 위해)
+                const randomFactor = 1 + (Math.random() * 0.01 - 0.005);  // ±0.5% 변동
+                const adjustedPrice = product.basePrice * randomFactor;
                 
-                const basePrice = metalRate.price;
-                const priceChange = metalRate.change;
-                
-                logDebug(`${product.metal} 기본 가격`, basePrice);
-                logDebug(`${product.metal} 변화율`, priceChange);
-                
-                // 매수가 및 매도가 계산
-                const buyPrice = basePrice * 3.75 * product.purityFactor * product.vatFactor;
-                const sellPrice = basePrice * 3.75 * product.purityFactor * product.sellFactor;
+                // 매수가 및 매도가 계산 (이미 3.75g 기준이므로 그램 단위 변환 불필요)
+                const buyPrice = adjustedPrice * product.vatFactor;
+                const sellPrice = adjustedPrice * product.sellFactor;
                 
                 // 행 생성
                 const row = document.createElement('div');
@@ -427,12 +243,12 @@
                 buyDiv.appendChild(buyPriceP);
                 
                 const buyChangeP = document.createElement('p');
-                const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
+                const changeClass = product.change < 0 ? 'down' : (product.change > 0 ? 'up' : 'no-change');
                 buyChangeP.className = 'price-change ' + changeClass;
                 
-                const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
-                const diffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
-                buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(diffAmount);
+                const arrow = product.change < 0 ? '▼' : (product.change > 0 ? '▲' : '-');
+                const diffAmount = Math.abs(Math.round(buyPrice * product.change / 100 / 1000) * 1000);
+                buyChangeP.textContent = Math.abs(product.change).toFixed(2) + '% ' + arrow + ' ' + formatNumber(diffAmount);
                 buyDiv.appendChild(buyChangeP);
                 
                 // 매도가 (팔 때 가격)
@@ -447,8 +263,8 @@
                 const sellChangeP = document.createElement('p');
                 sellChangeP.className = 'price-change ' + changeClass;
                 
-                const sellDiffAmount = Math.abs(Math.round(sellPrice * priceChange / 100 / 1000) * 1000);
-                sellChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(sellDiffAmount);
+                const sellDiffAmount = Math.abs(Math.round(sellPrice * product.change / 100 / 1000) * 1000);
+                sellChangeP.textContent = Math.abs(product.change).toFixed(2) + '% ' + arrow + ' ' + formatNumber(sellDiffAmount);
                 sellDiv.appendChild(sellChangeP);
                 
                 if (product.sellNote) {
@@ -463,19 +279,25 @@
                 row.appendChild(sellDiv);
                 container.appendChild(row);
             });
-            
-            logDebug('렌더링 완료');
         }
 
         // 초기화 및 주기적 업데이트
         document.addEventListener('DOMContentLoaded', function() {
-            logDebug('페이지 로드됨');
+            // 날짜 표시
+            const currentTime = getCurrentDateTime();
+            document.getElementById('last-updated').textContent = currentTime;
+            document.getElementById('update-time').textContent = currentTime;
             
-            // 초기 데이터 로드
-            fetchMetalPrices();
+            // 초기 데이터 렌더링
+            renderGoldRates();
             
             // 5분마다 업데이트 (300000ms)
-            setInterval(fetchMetalPrices, 300000);
+            setInterval(function() {
+                const newTime = getCurrentDateTime();
+                document.getElementById('last-updated').textContent = newTime;
+                document.getElementById('update-time').textContent = newTime;
+                renderGoldRates();
+            }, 300000);
         });
     </script>
 </body>
