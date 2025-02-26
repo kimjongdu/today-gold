@@ -13,16 +13,13 @@
             padding: 20px;
         }
         .container {
-            max-width: 900px;
+            max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
-            background: #111;
-            border-radius: 10px;
         }
         h2 {
             text-align: center;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
             margin-top: 0;
         }
         #last-updated {
@@ -33,42 +30,75 @@
         }
         .header {
             display: flex;
-            justify-content: space-between;
-            font-weight: bold;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
             padding-bottom: 10px;
-            border-bottom: 2px solid #333;
-            margin-bottom: 10px;
+        }
+        .header div {
+            flex: 1;
+            text-align: center;
+        }
+        .header div:first-child {
+            text-align: left;
         }
         .metal-row {
             display: flex;
-            justify-content: space-between;
-            padding: 15px 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
             border-bottom: 1px solid #222;
+        }
+        .metal-info {
+            flex: 1;
         }
         .metal-name {
             font-size: 18px;
             font-weight: bold;
-            flex: 1;
+            margin: 0 0 5px 0;
         }
-        .price {
+        .metal-spec {
+            font-size: 12px;
+            color: #aaa;
+            margin: 0;
+        }
+        .product-use {
+            font-size: 12px;
+            color: #aaa;
+            margin: 5px 0 0 0;
+        }
+        .buy-price, .sell-price {
             flex: 1;
             text-align: right;
+        }
+        .price-value {
             font-size: 20px;
             font-weight: bold;
+            margin: 0 0 5px 0;
         }
-        .change {
-            font-size: 14px;
-            color: #aaa;
-            text-align: right;
+        .price-change {
+            font-size: 12px;
+            margin: 0;
         }
-        .down { color: #4cc3ff; }
-        .up { color: #ff4c4c; }
-        .no-change { color: #ffcc00; }
+        .down {
+            color: #4cc3ff;
+        }
+        .up {
+            color: #ff4c4c;
+        }
+        .no-change {
+            color: #ffcc00;
+        }
+        .note {
+            font-size: 11px;
+            color: #999;
+            margin: 0;
+        }
         .footer {
             margin-top: 20px;
             font-size: 12px;
             color: #888;
-            text-align: center;
+        }
+        .footer p {
+            margin: 5px 0;
         }
         .loading {
             text-align: center;
@@ -81,6 +111,7 @@
             color: #ff4c4c;
         }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
@@ -88,8 +119,8 @@
         <p id="last-updated"></p>
         
         <div class="header">
-            <div>금속</div>
-            <div>내가 살 때 (VAT 포함)</div>
+            <div></div>
+            <div>내가 살 때 (VAT포함)</div>
             <div>내가 팔 때 (국방공과 기준)</div>
         </div>
         
@@ -99,87 +130,90 @@
         
         <div class="footer">
             <p>※ 시세는 시장 상황에 따라 예고 없이 변동될 수 있습니다.</p>
-            <p id="update-time">※ 최종 업데이트: -</p>
+            <p>※ 데이터 출처: MetalsAPI</p>
         </div>
     </div>
 
     <script>
-        // API 정보 설정
-        const apiKey = 'ytv8yfsfr4pdl026z2doc641nko13wj0h4whwebidhkxgnfi8n53q5yjayfy'; // 실제 API 키 입력
+        // 디버깅 로그
+        function logDebug(message, data) {
+            const timestamp = new Date().toISOString().substr(11, 8);
+            console.log(`[${timestamp}] ${message}`);
+            if (data) {
+                console.log(data);
+            }
+        }
+
+        // 금 제품별 기본 정보
+        const goldProducts = [
+            {
+                metal: '순금시세',
+                spec: 'Gold24k-3.75g',
+                apiSymbol: 'XAU',
+                purityFactor: 1.0,
+                vatFactor: 1.1,
+                sellFactor: 0.95
+            },
+            {
+                metal: '18K 금시세',
+                spec: 'Gold18k-3.75g',
+                productUse: '제품시세적용',
+                apiSymbol: 'XAU',
+                purityFactor: 0.75,
+                vatFactor: 1.1,
+                sellFactor: 0.95
+            },
+            {
+                metal: '14K 금시세',
+                spec: 'Gold14k-3.75g',
+                productUse: '제품시세적용', 
+                apiSymbol: 'XAU',
+                purityFactor: 0.585,
+                vatFactor: 1.1,
+                sellFactor: 0.95
+            },
+            {
+                metal: '백금시세',
+                spec: 'Platinum-3.75g',
+                apiSymbol: 'XPT',
+                purityFactor: 1.0,
+                vatFactor: 1.1,
+                sellFactor: 0.95,
+                sellNote: '(자사백금바기준)'
+            },
+            {
+                metal: '은시세',
+                spec: 'Silver-3.75g',
+                apiSymbol: 'XAG',
+                purityFactor: 1.0,
+                vatFactor: 1.1,
+                sellFactor: 0.95,
+                sellNote: '(자사실버바기준)'
+            }
+        ];
+
+        // 백업 데이터
+        const backupData = {
+            XAU: 0.000030, // 금 (약 33만원/g)
+            XAG: 0.002700, // 은 (약 3700원/g)
+            XPT: 0.000087  // 백금 (약 11만원/g)
+        };
+
+        // 이전 가격 저장 (변화율 계산용)
+        let previousRates = {};
+
+        // MetalsAPI 설정
+        const apiKey = 'YOUR_API_KEY'; // 여기에 실제 API 키를 입력하세요
         const apiEndpoint = 'https://metals-api.com/api/latest';
         const symbols = 'XAU,XAG,XPT'; // 금, 은, 백금
-        const baseCurrency = 'KRW'; // 원화 기준
+        const baseCurrency = 'KRW'; // 한국 원화
 
-        let previousRates = {}; // 이전 가격 저장
-
-        async function fetchMetalPrices() {
-            try {
-                const corsProxy = 'https://corsproxy.io/?';
-                const apiUrl = `${apiEndpoint}?access_key=${apiKey}&base=${baseCurrency}&symbols=${symbols}`;
-
-                const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
-                const data = await response.json();
-
-                if (data.success) {
-                    document.getElementById('last-updated').textContent = getCurrentDateTime();
-                    
-                    const oldRates = { ...previousRates };
-                    previousRates = { ...data.rates };
-
-                    renderGoldRates(data.rates, oldRates);
-                } else {
-                    throw new Error(data.error?.info || '알 수 없는 오류');
-                }
-            } catch (error) {
-                console.error('API 호출 오류:', error);
-                document.getElementById('gold-rates').innerHTML = `<div class="error">데이터를 불러올 수 없습니다: ${error.message}</div>`;
-            }
-        }
-
-        function renderGoldRates(rates, oldRates) {
-            const container = document.getElementById('gold-rates');
-            container.innerHTML = '';
-
-            function calculateChange(symbol) {
-                if (!oldRates[symbol] || !rates[symbol]) return 0;
-                return ((rates[symbol] - oldRates[symbol]) / oldRates[symbol]) * 100;
-            }
-
-            const goldPrice = rates["XAU"] ? rates["XAU"] / 31.1035 : 92000;
-            const silverPrice = rates["XAG"] ? rates["XAG"] / 31.1035 : 1100;
-            const platinumPrice = rates["XPT"] ? rates["XPT"] / 31.1035 : 35000;
-
-            const metals = {
-                "순금시세": { price: goldPrice, symbol: "XAU" },
-                "은시세": { price: silverPrice, symbol: "XAG" },
-                "백금시세": { price: platinumPrice, symbol: "XPT" }
-            };
-
-            Object.keys(metals).forEach((metal) => {
-                const { price, symbol } = metals[metal];
-                const priceChange = calculateChange(symbol);
-
-                // 내가 살 때 (VAT 포함) / 내가 팔 때 (국방공과 기준)
-                const buyPrice = price * 1.1; // VAT 포함 가격
-                const sellPrice = price * 0.95; // 국방공과 기준 가격
-                
-                const row = document.createElement('div');
-                row.className = 'metal-row';
-                row.innerHTML = `
-                    <div class="metal-name">${metal}</div>
-                    <div class="price">${formatNumber(buyPrice)}원</div>
-                    <div class="price">${formatNumber(sellPrice)}원</div>
-                `;
-                container.appendChild(row);
-            });
-
-            document.getElementById("update-time").textContent = `※ 최종 업데이트: ${getCurrentDateTime()}`;
-        }
-
+        // 숫자 형식 지정 (천 단위 콤마)
         function formatNumber(num) {
-            return Math.round(num).toLocaleString();
+            return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         }
 
+        // 현재 날짜 및 시간 포맷
         function getCurrentDateTime() {
             const now = new Date();
             const year = now.getFullYear();
@@ -191,9 +225,193 @@
             return `${year}.${month}.${day} ${hours}:${minutes}`;
         }
 
+        // API에서 금속 가격 가져오기
+        async function fetchMetalPrices() {
+            try {
+                logDebug('API 호출 시작');
+                
+                // CORS 프록시 사용
+                const corsProxy = 'https://corsproxy.io/?';
+                const apiUrl = `${apiEndpoint}?access_key=${apiKey}&base=${baseCurrency}&symbols=${symbols}`;
+                
+                logDebug('API URL', apiUrl);
+                
+                // 로컬 스토리지에서 캐시된 데이터 가져오기
+                const cachedData = localStorage.getItem('metalRates');
+                const cachedTime = localStorage.getItem('lastUpdated');
+                
+                if (cachedData) {
+                    logDebug('캐시된 데이터 발견', { time: cachedTime, data: JSON.parse(cachedData) });
+                }
+                
+                // API 호출
+                logDebug('프록시를 통한 API 호출');
+                const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
+                logDebug('API 응답 상태', response.status);
+                
+                const data = await response.json();
+                logDebug('API 응답 데이터', data);
+                
+                if (data.success) {
+                    logDebug('API 호출 성공', data.rates);
+                    
+                    // 날짜 업데이트
+                    document.getElementById('last-updated').textContent = getCurrentDateTime();
+                    
+                    // 변화율 계산을 위해 이전 데이터 저장
+                    const oldRates = { ...previousRates };
+                    previousRates = { ...data.rates };
+                    
+                    // 로컬 스토리지에 데이터 저장
+                    localStorage.setItem('metalRates', JSON.stringify(data.rates));
+                    localStorage.setItem('lastUpdated', getCurrentDateTime());
+                    
+                    // 시세 정보 표시
+                    renderGoldRates(data.rates, oldRates);
+                } else {
+                    throw new Error(data.error?.info || '알 수 없는 오류');
+                }
+            } catch (error) {
+                logDebug('API 호출 오류', error);
+                
+                // 로컬 스토리지에서 이전 데이터 가져오기
+                const savedRates = localStorage.getItem('metalRates');
+                const lastUpdated = localStorage.getItem('lastUpdated');
+                
+                if (savedRates) {
+                    logDebug('저장된 데이터 사용');
+                    const rates = JSON.parse(savedRates);
+                    document.getElementById('last-updated').textContent = lastUpdated + ' (저장된 데이터)';
+                    renderGoldRates(rates, rates);
+                } else {
+                    logDebug('백업 데이터 사용');
+                    document.getElementById('last-updated').textContent = getCurrentDateTime() + ' (백업 데이터)';
+                    renderGoldRates(backupData, backupData);
+                }
+            }
+        }
+
+        // 시세 정보 렌더링
+        function renderGoldRates(rates, oldRates) {
+            logDebug('시세 정보 렌더링', rates);
+            
+            const container = document.getElementById('gold-rates');
+            container.innerHTML = '';
+            
+            // 변화율 계산 함수
+            function calculateChange(symbol) {
+                if (!oldRates[symbol] || !rates[symbol]) return 0;
+                // API에서는 작은 값이 높은 가격을 의미하므로 계산 반전
+                return ((oldRates[symbol] - rates[symbol]) / oldRates[symbol]) * 100;
+            }
+            
+            // 각 제품별 시세 표시
+            goldProducts.forEach(function(product) {
+                // 금속 시세 계산
+                const rate = rates[product.apiSymbol];
+                if (!rate) {
+                    logDebug(`${product.apiSymbol} 데이터 없음`);
+                    return; // 해당 금속 데이터가 없으면 건너뛰기
+                }
+                
+                // 1g당 원화 가격으로 변환 (API는 1 KRW당 온스 가격을 반환)
+                const pricePerGram = (1 / rate) / 31.1035; // 트로이 온스를 그램으로 변환
+                logDebug(`${product.metal} 1g당 가격`, pricePerGram);
+                
+                // 변화율 (양수는 가격이 내려갔음을 의미, 음수는 가격이 올랐음을 의미)
+                const priceChange = calculateChange(product.apiSymbol);
+                logDebug(`${product.metal} 변화율`, priceChange);
+                
+                // 행 생성
+                const row = document.createElement('div');
+                row.className = 'metal-row';
+                
+                // 금속 정보
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'metal-info';
+                
+                const nameP = document.createElement('p');
+                nameP.className = 'metal-name';
+                nameP.textContent = product.metal;
+                infoDiv.appendChild(nameP);
+                
+                const specP = document.createElement('p');
+                specP.className = 'metal-spec';
+                specP.textContent = product.spec;
+                infoDiv.appendChild(specP);
+                
+                if (product.productUse) {
+                    const useP = document.createElement('p');
+                    useP.className = 'product-use';
+                    useP.textContent = product.productUse;
+                    infoDiv.appendChild(useP);
+                }
+                
+                // 매수가 (살 때 가격)
+                const buyDiv = document.createElement('div');
+                buyDiv.className = 'buy-price';
+                
+                const buyPrice = pricePerGram * 3.75 * product.purityFactor * product.vatFactor;
+                logDebug(`${product.metal} 매수가`, buyPrice);
+                
+                const buyPriceP = document.createElement('p');
+                buyPriceP.className = 'price-value';
+                buyPriceP.textContent = formatNumber(buyPrice) + '원';
+                buyDiv.appendChild(buyPriceP);
+                
+                const buyChangeP = document.createElement('p');
+                const changeClass = priceChange > 0 ? 'down' : (priceChange < 0 ? 'up' : 'no-change');
+                buyChangeP.className = 'price-change ' + changeClass;
+                
+                const arrow = priceChange > 0 ? '▼' : (priceChange < 0 ? '▲' : '-');
+                const diffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
+                buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(diffAmount);
+                buyDiv.appendChild(buyChangeP);
+                
+                // 매도가 (팔 때 가격)
+                const sellDiv = document.createElement('div');
+                sellDiv.className = 'sell-price';
+                
+                const sellPrice = pricePerGram * 3.75 * product.purityFactor * product.sellFactor;
+                logDebug(`${product.metal} 매도가`, sellPrice);
+                
+                const sellPriceP = document.createElement('p');
+                sellPriceP.className = 'price-value';
+                sellPriceP.textContent = formatNumber(sellPrice) + '원';
+                sellDiv.appendChild(sellPriceP);
+                
+                const sellChangeP = document.createElement('p');
+                sellChangeP.className = 'price-change ' + changeClass;
+                
+                const sellDiffAmount = Math.abs(Math.round(sellPrice * priceChange / 100 / 1000) * 1000);
+                sellChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(sellDiffAmount);
+                sellDiv.appendChild(sellChangeP);
+                
+                if (product.sellNote) {
+                    const noteP = document.createElement('p');
+                    noteP.className = 'note';
+                    noteP.textContent = product.sellNote;
+                    sellDiv.appendChild(noteP);
+                }
+                
+                row.appendChild(infoDiv);
+                row.appendChild(buyDiv);
+                row.appendChild(sellDiv);
+                container.appendChild(row);
+            });
+            
+            logDebug('렌더링 완료');
+        }
+
+        // 초기화 및 주기적 업데이트
         document.addEventListener('DOMContentLoaded', function() {
+            logDebug('페이지 로드됨');
+            
+            // 초기 데이터 로드
             fetchMetalPrices();
-            setInterval(fetchMetalPrices, 14400000); // 4시간마다 업데이트
+            
+            // 5분마다 업데이트 (300000ms)
+            setInterval(fetchMetalPrices, 300000);
         });
     </script>
 </body>
