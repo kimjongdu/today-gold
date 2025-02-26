@@ -128,18 +128,19 @@
             {
                 metal: '순금시세',
                 spec: 'Gold24k-3.75g',
-                buyPrice: 591000,    // 실제 시세에 맞게 조정: 591,000원
-                sellPrice: 510000,   // 실제 시세에 맞게 조정: 510,000원
-                change: -1.35        // 변동률도 실제 값으로 조정
+                buyPrice: 591000,    // 정확한 시세
+                sellPrice: 510000,   // 정확한 시세
+                change: -1.35,       // 정확한 변동률
+                diffAmount: 8000    // 변동 금액
             },
-            // 다른 제품도 비율에 맞게 조정
             {
                 metal: '18K 금시세',
                 spec: 'Gold18k-3.75g',
                 productUse: '제품시세적용',
-                buyPrice: 443250,    // 순금의 75%
-                sellPrice: 382500,   // 매도가도 순금의 75%
-                change: -1.35
+                buyPrice: 0,         // 실제 표기하지 않는 경우 0
+                sellPrice: 375000,   // 실제 시세에 맞게 조정
+                change: -2.93,
+                diffAmount: 11000
             },
             {
                 metal: '14K 금시세',
@@ -195,9 +196,11 @@
                 // 가격에 약간의 무작위 변동 추가 (실시간 느낌을 위해)
                 const randomFactor = 1 + (Math.random() * 0.01 - 0.005);  // ±0.5% 변동
                 
-                // 직접 설정한 가격 사용
-                const buyPrice = product.buyPrice * randomFactor;
-                const sellPrice = product.sellPrice * randomFactor;
+                const buyPrice = product.buyPrice;  // 무작위 변동 없이 그대로 사용
+                const sellPrice = product.sellPrice; // 무작위 변동 없이 그대로 사용
+                
+                
+                const diffAmount = product.diffAmount || 0;
                 
                 // 행 생성
                 const row = document.createElement('div');
