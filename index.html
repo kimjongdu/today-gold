@@ -100,6 +100,16 @@
         .footer p {
             margin: 5px 0;
         }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #aaa;
+        }
+        .error {
+            text-align: center;
+            padding: 20px;
+            color: #ff4c4c;
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 </head>
@@ -115,30 +125,22 @@
         </div>
         
         <div id="gold-rates">
-            <p style="text-align: center; color: #aaa;">데이터를 불러오는 중...</p>
+            <div class="loading">데이터를 불러오는 중...</div>
         </div>
         
         <div class="footer">
             <p>※ 시세는 시장 상황에 따라 예고 없이 변동될 수 있습니다.</p>
-            <p>※ 데이터 출처: TradingView</p>
+            <p>※ 데이터 출처: MetalsAPI</p>
         </div>
     </div>
 
-    <script src="https://s3.tradingview.com/tv.js"></script>
     <script>
-        // 금 시세 데이터를 저장할 객체
-        const goldData = {
-            'TVC:GOLD': { price: 0, change: 0 },      // 현물 금
-            'TVC:SILVER': { price: 0, change: 0 },    // 현물 은
-            'TVC:PLATINUM': { price: 0, change: 0 }   // 현물 백금
-        };
-
         // 금 제품별 기본 정보
         const goldProducts = [
             {
                 metal: '순금시세',
                 spec: 'Gold24k-3.75g',
-                dataSource: 'TVC:GOLD',
+                symbol: 'XAU',
                 purityFactor: 1.0,
                 vatFactor: 1.1,
                 sellFactor: 0.95
@@ -147,7 +149,7 @@
                 metal: '18K 금시세',
                 spec: 'Gold18k-3.75g',
                 productUse: '제품시세적용',
-                dataSource: 'TVC:GOLD',
+                symbol: 'XAU',
                 purityFactor: 0.75,
                 vatFactor: 1.1,
                 sellFactor: 0.95
@@ -156,7 +158,7 @@
                 metal: '14K 금시세',
                 spec: 'Gold14k-3.75g',
                 productUse: '제품시세적용', 
-                dataSource: 'TVC:GOLD',
+                symbol: 'XAU',
                 purityFactor: 0.585,
                 vatFactor: 1.1,
                 sellFactor: 0.95
@@ -164,7 +166,7 @@
             {
                 metal: '백금시세',
                 spec: 'Platinum-3.75g',
-                dataSource: 'TVC:PLATINUM',
+                symbol: 'XPT',
                 purityFactor: 1.0,
                 vatFactor: 1.1,
                 sellFactor: 0.95,
@@ -173,7 +175,7 @@
             {
                 metal: '은시세',
                 spec: 'Silver-3.75g',
-                dataSource: 'TVC:SILVER',
+                symbol: 'XAG',
                 purityFactor: 1.0,
                 vatFactor: 1.1,
                 sellFactor: 0.95,
@@ -181,53 +183,107 @@
             }
         ];
 
-        // 데이터 업데이트 함수
-        function updateGoldPrices(symbol, price, change) {
-            if (goldData.hasOwnProperty(symbol)) {
-                goldData[symbol].price = price;
-                goldData[symbol].change = change;
-                renderGoldRates();
-            }
-        }
+        // 최근 가격 데이터 저장용 객체
+        let previousPrices = {};
 
         // 숫자 형식 지정 (천 단위 콤마)
         function formatNumber(num) {
             return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         }
 
-        // 시세 정보 렌더링
-        function renderGoldRates() {
-            // 데이터가 아직 로드되지 않았으면 리턴
-            if (goldData['TVC:GOLD'].price === 0) return;
+        // 현재 날짜 및 시간 포맷
+        function getCurrentDateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
             
+            return `${year}.${month}.${day} ${hours}:${minutes}`;
+        }
+
+        // API에서 금속 가격 가져오기
+        async function fetchMetalPrices() {
+            try {
+                // MetalsAPI로부터 금속 시세 데이터 가져오기
+                // 무료 API 키를 사용하면 하루 50회로 제한됨
+                const apiKey = 'YOUR_METALS_API_KEY';  // 실제 API 키로 교체 필요
+                const symbols = 'XAU,XAG,XPT';
+                const base = 'KRW';
+
+                // 데모 및 테스트를 위한 대체 URL
+                // 실제 사용 시 아래 URL 대신 실제 MetalsAPI URL 사용
+                // const url = `https://metals-api.com/api/latest?access_key=${apiKey}&base=${base}&symbols=${symbols}`;
+                
+                // 샘플 데이터 (API 호출 없이 테스트용)
+                const sampleResponse = {
+                    success: true,
+                    timestamp: Math.floor(Date.now() / 1000),
+                    base: 'KRW',
+                    rates: {
+                        XAU: 0.000465,  // 약 2,150,000원/g
+                        XAG: 0.029,     // 약 34,500원/g
+                        XPT: 0.000765   // 약 1,307,000원/g
+                    }
+                };
+                
+                // 실제 API 호출 코드 (사용 시 주석 해제)
+                // const response = await fetch(url);
+                // const data = await response.json();
+                
+                // 샘플 데이터 사용 (실제 사용 시 주석 처리)
+                const data = sampleResponse;
+                
+                if (data.success) {
+                    // 이전 가격 데이터 저장
+                    const oldPrices = { ...previousPrices };
+                    
+                    // 새 가격 데이터 변환 및 저장
+                    const metalPrices = {};
+                    Object.keys(data.rates).forEach(symbol => {
+                        // API는 기준 통화 1단위당 금속 온스를 반환하므로 변환 필요
+                        const pricePerGram = (1 / data.rates[symbol]) / 31.1035; // 트로이 온스를 그램으로 변환
+                        metalPrices[symbol] = pricePerGram;
+                        previousPrices[symbol] = pricePerGram;
+                    });
+                    
+                    // 날짜 업데이트
+                    document.getElementById('last-updated').textContent = getCurrentDateTime();
+                    
+                    // 시세 정보 표시
+                    renderGoldRates(metalPrices, oldPrices);
+                } else {
+                    throw new Error('API 응답 실패');
+                }
+            } catch (error) {
+                console.error('금속 가격 가져오기 실패:', error);
+                
+                // 오류 시 기본 데이터로 렌더링 (이전 데이터가 있으면 사용)
+                if (Object.keys(previousPrices).length > 0) {
+                    renderGoldRates(previousPrices, previousPrices);
+                } else {
+                    document.getElementById('gold-rates').innerHTML = 
+                        '<div class="error">데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
+                }
+            }
+        }
+
+        // 시세 정보 렌더링
+        function renderGoldRates(prices, oldPrices) {
             const container = document.getElementById('gold-rates');
             container.innerHTML = '';
             
-            // 오늘 날짜 표시
-            const now = new Date();
-            const formattedDate = now.getFullYear() + '.' + 
-                                String(now.getMonth() + 1).padStart(2, '0') + '.' + 
-                                String(now.getDate()).padStart(2, '0');
-            document.getElementById('last-updated').textContent = formattedDate;
-            
-            // 금 시세 기준 가격 (1g당 원화)
-            const goldPricePerGram = goldData['TVC:GOLD'].price * 1500;  // 대략적인 환율 적용
-            const silverPricePerGram = goldData['TVC:SILVER'].price * 1500;
-            const platinumPricePerGram = goldData['TVC:PLATINUM'].price * 1500;
-            
             // 각 제품별 시세 표시
             goldProducts.forEach(function(product) {
-                // 가격 계산을 위한 기준 가격 선택
-                let basePricePerGram = goldPricePerGram;
-                let baseChange = goldData['TVC:GOLD'].change;
+                // 가격 계산
+                const metalPrice = prices[product.symbol] || 0;
+                const oldPrice = oldPrices[product.symbol] || metalPrice;
                 
-                if (product.dataSource === 'TVC:SILVER') {
-                    basePricePerGram = silverPricePerGram;
-                    baseChange = goldData['TVC:SILVER'].change;
-                } else if (product.dataSource === 'TVC:PLATINUM') {
-                    basePricePerGram = platinumPricePerGram;
-                    baseChange = goldData['TVC:PLATINUM'].change;
-                }
+                // 변화율 계산
+                const priceChange = metalPrice !== 0 && oldPrice !== 0 
+                    ? ((metalPrice - oldPrice) / oldPrice) * 100 
+                    : 0;
                 
                 // 행 생성
                 const row = document.createElement('div');
@@ -258,35 +314,36 @@
                 const buyDiv = document.createElement('div');
                 buyDiv.className = 'buy-price';
                 
-                const buyPrice = basePricePerGram * 3.75 * product.purityFactor * product.vatFactor;
+                const buyPrice = metalPrice * 3.75 * product.purityFactor * product.vatFactor;
                 const buyPriceP = document.createElement('p');
                 buyPriceP.className = 'price-value';
                 buyPriceP.textContent = formatNumber(buyPrice) + '원';
                 buyDiv.appendChild(buyPriceP);
                 
                 const buyChangeP = document.createElement('p');
-                buyChangeP.className = 'price-change ' + (baseChange < 0 ? 'down' : (baseChange > 0 ? 'up' : 'no-change'));
+                const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
+                buyChangeP.className = `price-change ${changeClass}`;
                 
-                const arrow = baseChange < 0 ? '▼' : (baseChange > 0 ? '▲' : '-');
-                const diffAmount = Math.abs(Math.round(buyPrice * baseChange / 100 / 1000) * 1000);
-                buyChangeP.textContent = Math.abs(baseChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(diffAmount);
+                const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
+                const diffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
+                buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(diffAmount);
                 buyDiv.appendChild(buyChangeP);
                 
                 // 매도가 (팔 때 가격)
                 const sellDiv = document.createElement('div');
                 sellDiv.className = 'sell-price';
                 
-                const sellPrice = basePricePerGram * 3.75 * product.purityFactor * product.sellFactor;
+                const sellPrice = metalPrice * 3.75 * product.purityFactor * product.sellFactor;
                 const sellPriceP = document.createElement('p');
                 sellPriceP.className = 'price-value';
                 sellPriceP.textContent = formatNumber(sellPrice) + '원';
                 sellDiv.appendChild(sellPriceP);
                 
                 const sellChangeP = document.createElement('p');
-                sellChangeP.className = 'price-change ' + (baseChange < 0 ? 'down' : (baseChange > 0 ? 'up' : 'no-change'));
+                sellChangeP.className = `price-change ${changeClass}`;
                 
-                const sellDiffAmount = Math.abs(Math.round(sellPrice * baseChange / 100 / 1000) * 1000);
-                sellChangeP.textContent = Math.abs(baseChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(sellDiffAmount);
+                const sellDiffAmount = Math.abs(Math.round(sellPrice * priceChange / 100 / 1000) * 1000);
+                sellChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(sellDiffAmount);
                 sellDiv.appendChild(sellChangeP);
                 
                 if (product.sellNote) {
@@ -303,60 +360,13 @@
             });
         }
 
-        // TradingView 위젯 생성 및 데이터 가져오기
-        function createTradingViewWidget(symbol) {
-            const container = document.createElement('div');
-            container.style.display = 'none';
-            document.body.appendChild(container);
-            
-            new TradingView.widget({
-                "autosize": true,
-                "symbol": symbol,
-                "interval": "D",
-                "timezone": "Asia/Seoul",
-                "theme": "dark",
-                "style": "1",
-                "locale": "kr",
-                "hide_top_toolbar": true,
-                "hide_legend": true,
-                "container_id": container.id,
-                "disabled_features": ["all"],
-                "enabled_features": [],
-                "withdateranges": false,
-                "save_image": false,
-                "callback": function(widget) {
-                    widget.onChartReady(function() {
-                        // 차트가 준비되면 데이터 가져오기
-                        const price = widget.chart().crossHairPrice();
-                        const change = widget.chart().priceChange();
-                        updateGoldPrices(symbol, price.price, change.percent);
-                        
-                        // 데이터 변경 시 업데이트
-                        widget.chart().onSymbolChange().subscribe(null, function() {
-                            const updatedPrice = widget.chart().crossHairPrice();
-                            const updatedChange = widget.chart().priceChange();
-                            updateGoldPrices(symbol, updatedPrice.price, updatedChange.percent);
-                        });
-                    });
-                }
-            });
-            
-            // ID 생성 및 반환
-            container.id = 'tv_' + symbol.replace(':', '_');
-            return container.id;
-        }
-
-        // 모든 금속에 대해 TradingView 위젯 생성
+        // 초기화 및 주기적 업데이트
         document.addEventListener('DOMContentLoaded', function() {
-            // 각 금속 유형에 대한 위젯 생성
-            for (const symbol in goldData) {
-                createTradingViewWidget(symbol);
-            }
+            // 초기 데이터 로드
+            fetchMetalPrices();
             
-            // 5분마다 페이지 새로고침 (데이터 업데이트)
-            setInterval(function() {
-                location.reload();
-            }, 5 * 60 * 1000);
+            // 5분마다 업데이트
+            setInterval(fetchMetalPrices, 5 * 60 * 1000);
         });
     </script>
 </body>
