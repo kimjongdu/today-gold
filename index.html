@@ -124,60 +124,51 @@
 
     <script>
         // 금속 제품 정보 (3.75g 기준 가격)
-        const goldProducts = [
+        const metalProducts = [
             {
                 metal: '순금시세',
                 spec: 'Gold24k-3.75g',
-                basePrice: 500000,  // 3.75g당 가격
-                change: -0.5,       // 변동률(%)
-                purityFactor: 1.0,
-                vatFactor: 1.1,
-                sellFactor: 0.95
+                buyPrice: 500000,    // 3.75g당 매수가 (VAT 포함)
+                sellPrice: 475000,   // 3.75g당 매도가
+                change: -0.5         // 변동률(%)
             },
             {
                 metal: '18K 금시세',
                 spec: 'Gold18k-3.75g',
                 productUse: '제품시세적용',
-                basePrice: 375000,  // 3.75g당 가격 (75% 순도)
-                change: -0.5,
-                purityFactor: 1.0,  // 순도는 이미 가격에 반영됨
-                vatFactor: 1.1,
-                sellFactor: 0.95
+                buyPrice: 375000,    // 3.75g당 매수가 (VAT 포함)
+                sellPrice: 356250,   // 3.75g당 매도가
+                change: -0.5
             },
             {
                 metal: '14K 금시세',
                 spec: 'Gold14k-3.75g',
                 productUse: '제품시세적용',
-                basePrice: 292500,  // 3.75g당 가격 (58.5% 순도)
-                change: -0.5,
-                purityFactor: 1.0,  // 순도는 이미 가격에 반영됨
-                vatFactor: 1.1,
-                sellFactor: 0.95
+                buyPrice: 292500,    // 3.75g당 매수가 (VAT 포함) 
+                sellPrice: 277875,   // 3.75g당 매도가
+                change: -0.5
             },
             {
                 metal: '백금시세',
                 spec: 'Platinum-3.75g',
-                basePrice: 206250,  // 3.75g당 가격
+                buyPrice: 206250,    // 3.75g당 매수가 (VAT 포함)
+                sellPrice: 195938,   // 3.75g당 매도가
                 change: -0.2,
-                purityFactor: 1.0,
-                vatFactor: 1.1,
-                sellFactor: 0.95,
                 sellNote: '(자사백금바기준)'
             },
             {
                 metal: '은시세',
                 spec: 'Silver-3.75g',
-                basePrice: 6375,    // 3.75g당 가격
+                buyPrice: 6375,      // 3.75g당 매수가 (VAT 포함)
+                sellPrice: 6056,     // 3.75g당 매도가
                 change: -0.3,
-                purityFactor: 1.0,
-                vatFactor: 1.1,
-                sellFactor: 0.95,
                 sellNote: '(자사실버바기준)'
             }
         ];
 
         // 숫자 형식 지정 (천 단위 콤마)
         function formatNumber(num) {
+            if (isNaN(num) || num === null) return "0";
             return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         }
 
@@ -199,14 +190,13 @@
             container.innerHTML = '';
             
             // 각 제품별 시세 표시
-            goldProducts.forEach(function(product) {
+            metalProducts.forEach(function(product) {
                 // 가격에 약간의 무작위 변동 추가 (실시간 느낌을 위해)
                 const randomFactor = 1 + (Math.random() * 0.01 - 0.005);  // ±0.5% 변동
-                const adjustedPrice = product.basePrice * randomFactor;
                 
-                // 매수가 및 매도가 계산 (이미 3.75g 기준이므로 그램 단위 변환 불필요)
-                const buyPrice = adjustedPrice * product.vatFactor;
-                const sellPrice = adjustedPrice * product.sellFactor;
+                // 직접 설정한 가격 사용
+                const buyPrice = product.buyPrice * randomFactor;
+                const sellPrice = product.sellPrice * randomFactor;
                 
                 // 행 생성
                 const row = document.createElement('div');
