@@ -130,7 +130,7 @@
         
         <div class="footer">
             <p>※ 시세는 시장 상황에 따라 예고 없이 변동될 수 있습니다.</p>
-            <p>※ 데이터 출처: MetalsAPI</p>
+            <p>※ 데이터 출처: CoinGecko API</p>
         </div>
     </div>
 
@@ -140,7 +140,7 @@
             {
                 metal: '순금시세',
                 spec: 'Gold24k-3.75g',
-                symbol: 'XAU',
+                apiId: 'gold',
                 purityFactor: 1.0,
                 vatFactor: 1.1,
                 sellFactor: 0.95
@@ -149,7 +149,7 @@
                 metal: '18K 금시세',
                 spec: 'Gold18k-3.75g',
                 productUse: '제품시세적용',
-                symbol: 'XAU',
+                apiId: 'gold',
                 purityFactor: 0.75,
                 vatFactor: 1.1,
                 sellFactor: 0.95
@@ -158,7 +158,7 @@
                 metal: '14K 금시세',
                 spec: 'Gold14k-3.75g',
                 productUse: '제품시세적용', 
-                symbol: 'XAU',
+                apiId: 'gold',
                 purityFactor: 0.585,
                 vatFactor: 1.1,
                 sellFactor: 0.95
@@ -166,7 +166,7 @@
             {
                 metal: '백금시세',
                 spec: 'Platinum-3.75g',
-                symbol: 'XPT',
+                apiId: 'platinum',
                 purityFactor: 1.0,
                 vatFactor: 1.1,
                 sellFactor: 0.95,
@@ -175,7 +175,7 @@
             {
                 metal: '은시세',
                 spec: 'Silver-3.75g',
-                symbol: 'XAG',
+                apiId: 'silver',
                 purityFactor: 1.0,
                 vatFactor: 1.1,
                 sellFactor: 0.95,
@@ -206,62 +206,53 @@
         // API에서 금속 가격 가져오기
         async function fetchMetalPrices() {
             try {
-                // MetalsAPI로부터 금속 시세 데이터 가져오기
-                // 무료 API 키를 사용하면 하루 50회로 제한됨
-                const apiKey = 'YOUR_METALS_API_KEY';  // 실제 API 키로 교체 필요
-                const symbols = 'XAU,XAG,XPT';
-                const base = 'KRW';
-
-                // 데모 및 테스트를 위한 대체 URL
-                // 실제 사용 시 아래 URL 대신 실제 MetalsAPI URL 사용
-                // const url = `https://metals-api.com/api/latest?access_key=${apiKey}&base=${base}&symbols=${symbols}`;
+                // CoinGecko API로부터 금속 시세 데이터 가져오기 (API 키 필요 없음)
+                const apiUrl = 'https://api.coingecko.com/api/v3/simple/price?ids=gold,silver,platinum&vs_currencies=krw&include_24hr_change=true';
                 
-                // 샘플 데이터 (API 호출 없이 테스트용)
-                const sampleResponse = {
-                    success: true,
-                    timestamp: Math.floor(Date.now() / 1000),
-                    base: 'KRW',
-                    rates: {
-                        XAU: 0.000465,  // 약 2,150,000원/g
-                        XAG: 0.029,     // 약 34,500원/g
-                        XPT: 0.000765   // 약 1,307,000원/g
-                    }
-                };
+                const response = await fetch(apiUrl);
+                const data = await response.json();
                 
-                // 실제 API 호출 코드 (사용 시 주석 해제)
-                // const response = await fetch(url);
-                // const data = await response.json();
-                
-                // 샘플 데이터 사용 (실제 사용 시 주석 처리)
-                const data = sampleResponse;
-                
-                if (data.success) {
+                if (data && data.gold && data.silver) {
                     // 이전 가격 데이터 저장
                     const oldPrices = { ...previousPrices };
                     
                     // 새 가격 데이터 변환 및 저장
                     const metalPrices = {};
-                    Object.keys(data.rates).forEach(symbol => {
-                        // API는 기준 통화 1단위당 금속 온스를 반환하므로 변환 필요
-                        const pricePerGram = (1 / data.rates[symbol]) / 31.1035; // 트로이 온스를 그램으로 변환
-                        metalPrices[symbol] = pricePerGram;
-                        previousPrices[symbol] = pricePerGram;
-                    });
+                    
+                    // 금 가격 (1g당 원화)
+                    metalPrices.gold = data.gold.krw;
+                    
+                    // 은 가격 (1g당 원화)
+                    metalPrices.silver = data.silver.krw;
+                    
+                    // 백금 가격 (1g당 원화, 백금 데이터가 없을 경우 금 가격의 1.2배로 추정)
+                    metalPrices.platinum = data.platinum ? data.platinum.krw : data.gold.krw * 1.2;
+                    
+                    // 변화율 저장
+                    const changes = {
+                        gold: data.gold.krw_24h_change || 0,
+                        silver: data.silver.krw_24h_change || 0,
+                        platinum: data.platinum ? data.platinum.krw_24h_change : 0
+                    };
+                    
+                    // 이전 가격 업데이트
+                    previousPrices = { ...metalPrices };
                     
                     // 날짜 업데이트
                     document.getElementById('last-updated').textContent = getCurrentDateTime();
                     
                     // 시세 정보 표시
-                    renderGoldRates(metalPrices, oldPrices);
+                    renderGoldRates(metalPrices, changes);
                 } else {
-                    throw new Error('API 응답 실패');
+                    throw new Error('API 응답에 필요한 데이터가 없습니다');
                 }
             } catch (error) {
                 console.error('금속 가격 가져오기 실패:', error);
                 
                 // 오류 시 기본 데이터로 렌더링 (이전 데이터가 있으면 사용)
                 if (Object.keys(previousPrices).length > 0) {
-                    renderGoldRates(previousPrices, previousPrices);
+                    const zeroChanges = {gold: 0, silver: 0, platinum: 0};
+                    renderGoldRates(previousPrices, zeroChanges);
                 } else {
                     document.getElementById('gold-rates').innerHTML = 
                         '<div class="error">데이터를 불러올 수 없습니다. 잠시 후 다시 시도해주세요.</div>';
@@ -270,20 +261,15 @@
         }
 
         // 시세 정보 렌더링
-        function renderGoldRates(prices, oldPrices) {
+        function renderGoldRates(prices, changes) {
             const container = document.getElementById('gold-rates');
             container.innerHTML = '';
             
             // 각 제품별 시세 표시
             goldProducts.forEach(function(product) {
                 // 가격 계산
-                const metalPrice = prices[product.symbol] || 0;
-                const oldPrice = oldPrices[product.symbol] || metalPrice;
-                
-                // 변화율 계산
-                const priceChange = metalPrice !== 0 && oldPrice !== 0 
-                    ? ((metalPrice - oldPrice) / oldPrice) * 100 
-                    : 0;
+                const metalPrice = prices[product.apiId] || 0;
+                const priceChange = changes[product.apiId] || 0;
                 
                 // 행 생성
                 const row = document.createElement('div');
