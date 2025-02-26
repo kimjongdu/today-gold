@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한국금거래소 시세 라인업</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h2 {
+            text-align: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        #last-updated {
+            text-align: right;
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+        .header {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        .header div {
+            flex: 1;
+            text-align: center;
+        }
+        .header div:first-child {
+            text-align: left;
+        }
+        .metal-row {
+            display: flex;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #222;
+        }
+        .metal-info {
+            flex: 1;
+        }
+        .metal-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+        }
+        .metal-spec {
+            font-size: 12px;
+            color: #aaa;
+            margin: 0;
+        }
+        .product-use {
+            font-size: 12px;
+            color: #aaa;
+            margin: 5px 0 0 0;
+        }
+        .buy-price, .sell-price {
+            flex: 1;
+            text-align: right;
+        }
+        .price-value {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+        }
+        .price-change {
+            font-size: 12px;
+            margin: 0;
+        }
+        .down {
+            color: #4cc3ff;
+        }
+        .up {
+            color: #ff4c4c;
+        }
+        .no-change {
+            color: #ffcc00;
+        }
+        .note {
+            font-size: 11px;
+            color: #999;
+            margin: 0;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #888;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h2>한국금거래소 시세 라인업</h2>
+        <p id="last-updated"></p>
+        
+        <div class="header">
+            <div></div>
+            <div>내가 살 때 (VAT포함)</div>
+            <div>내가 팔 때 (국방공과 기준)</div>
+        </div>
+        
+        <div id="gold-rates">
+            <p style="text-align: center; color: #aaa;">데이터를 불러오는 중...</p>
+        </div>
+        
+        <div class="footer">
+            <p>※ 시세는 시장 상황에 따라 예고 없이 변동될 수 있습니다.</p>
+            <p>※ 데이터 출처: TradingView</p>
+        </div>
+    </div>
+
+    <script src="https://s3.tradingview.com/tv.js"></script>
+    <script>
+        // 금 시세 데이터를 저장할 객체
+        const goldData = {
+            'TVC:GOLD': { price: 0, change: 0 },      // 현물 금
+            'TVC:SILVER': { price: 0, change: 0 },    // 현물 은
+            'TVC:PLATINUM': { price: 0, change: 0 }   // 현물 백금
+        };
+
+        // 금 제품별 기본 정보
+        const goldProducts = [
+            {
+                metal: '순금시세',
+                spec: 'Gold24k-3.75g',
+                dataSource: 'TVC:GOLD',
+                purityFactor: 1.0,
+                vatFactor: 1.1,
+                sellFactor: 0.95
+            },
+            {
+                metal: '18K 금시세',
+                spec: 'Gold18k-3.75g',
+                productUse: '제품시세적용',
+                dataSource: 'TVC:GOLD',
+                purityFactor: 0.75,
+                vatFactor: 1.1,
+                sellFactor: 0.95
+            },
+            {
+                metal: '14K 금시세',
+                spec: 'Gold14k-3.75g',
+                productUse: '제품시세적용', 
+                dataSource: 'TVC:GOLD',
+                purityFactor: 0.585,
+                vatFactor: 1.1,
+                sellFactor: 0.95
+            },
+            {
+                metal: '백금시세',
+                spec: 'Platinum-3.75g',
+                dataSource: 'TVC:PLATINUM',
+                purityFactor: 1.0,
+                vatFactor: 1.1,
+                sellFactor: 0.95,
+                sellNote: '(자사백금바기준)'
+            },
+            {
+                metal: '은시세',
+                spec: 'Silver-3.75g',
+                dataSource: 'TVC:SILVER',
+                purityFactor: 1.0,
+                vatFactor: 1.1,
+                sellFactor: 0.95,
+                sellNote: '(자사실버바기준)'
+            }
+        ];
+
+        // 데이터 업데이트 함수
+        function updateGoldPrices(symbol, price, change) {
+            if (goldData.hasOwnProperty(symbol)) {
+                goldData[symbol].price = price;
+                goldData[symbol].change = change;
+                renderGoldRates();
+            }
+        }
+
+        // 숫자 형식 지정 (천 단위 콤마)
+        function formatNumber(num) {
+            return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+
+        // 시세 정보 렌더링
+        function renderGoldRates() {
+            // 데이터가 아직 로드되지 않았으면 리턴
+            if (goldData['TVC:GOLD'].price === 0) return;
+            
+            const container = document.getElementById('gold-rates');
+            container.innerHTML = '';
+            
+            // 오늘 날짜 표시
+            const now = new Date();
+            const formattedDate = now.getFullYear() + '.' + 
+                                String(now.getMonth() + 1).padStart(2, '0') + '.' + 
+                                String(now.getDate()).padStart(2, '0');
+            document.getElementById('last-updated').textContent = formattedDate;
+            
+            // 금 시세 기준 가격 (1g당 원화)
+            const goldPricePerGram = goldData['TVC:GOLD'].price * 1500;  // 대략적인 환율 적용
+            const silverPricePerGram = goldData['TVC:SILVER'].price * 1500;
+            const platinumPricePerGram = goldData['TVC:PLATINUM'].price * 1500;
+            
+            // 각 제품별 시세 표시
+            goldProducts.forEach(function(product) {
+                // 가격 계산을 위한 기준 가격 선택
+                let basePricePerGram = goldPricePerGram;
+                let baseChange = goldData['TVC:GOLD'].change;
+                
+                if (product.dataSource === 'TVC:SILVER') {
+                    basePricePerGram = silverPricePerGram;
+                    baseChange = goldData['TVC:SILVER'].change;
+                } else if (product.dataSource === 'TVC:PLATINUM') {
+                    basePricePerGram = platinumPricePerGram;
+                    baseChange = goldData['TVC:PLATINUM'].change;
+                }
+                
+                // 행 생성
+                const row = document.createElement('div');
+                row.className = 'metal-row';
+                
+                // 금속 정보
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'metal-info';
+                
+                const nameP = document.createElement('p');
+                nameP.className = 'metal-name';
+                nameP.textContent = product.metal;
+                infoDiv.appendChild(nameP);
+                
+                const specP = document.createElement('p');
+                specP.className = 'metal-spec';
+                specP.textContent = product.spec;
+                infoDiv.appendChild(specP);
+                
+                if (product.productUse) {
+                    const useP = document.createElement('p');
+                    useP.className = 'product-use';
+                    useP.textContent = product.productUse;
+                    infoDiv.appendChild(useP);
+                }
+                
+                // 매수가 (살 때 가격)
+                const buyDiv = document.createElement('div');
+                buyDiv.className = 'buy-price';
+                
+                const buyPrice = basePricePerGram * 3.75 * product.purityFactor * product.vatFactor;
+                const buyPriceP = document.createElement('p');
+                buyPriceP.className = 'price-value';
+                buyPriceP.textContent = formatNumber(buyPrice) + '원';
+                buyDiv.appendChild(buyPriceP);
+                
+                const buyChangeP = document.createElement('p');
+                buyChangeP.className = 'price-change ' + (baseChange < 0 ? 'down' : (baseChange > 0 ? 'up' : 'no-change'));
+                
+                const arrow = baseChange < 0 ? '▼' : (baseChange > 0 ? '▲' : '-');
+                const diffAmount = Math.abs(Math.round(buyPrice * baseChange / 100 / 1000) * 1000);
+                buyChangeP.textContent = Math.abs(baseChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(diffAmount);
+                buyDiv.appendChild(buyChangeP);
+                
+                // 매도가 (팔 때 가격)
+                const sellDiv = document.createElement('div');
+                sellDiv.className = 'sell-price';
+                
+                const sellPrice = basePricePerGram * 3.75 * product.purityFactor * product.sellFactor;
+                const sellPriceP = document.createElement('p');
+                sellPriceP.className = 'price-value';
+                sellPriceP.textContent = formatNumber(sellPrice) + '원';
+                sellDiv.appendChild(sellPriceP);
+                
+                const sellChangeP = document.createElement('p');
+                sellChangeP.className = 'price-change ' + (baseChange < 0 ? 'down' : (baseChange > 0 ? 'up' : 'no-change'));
+                
+                const sellDiffAmount = Math.abs(Math.round(sellPrice * baseChange / 100 / 1000) * 1000);
+                sellChangeP.textContent = Math.abs(baseChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(sellDiffAmount);
+                sellDiv.appendChild(sellChangeP);
+                
+                if (product.sellNote) {
+                    const noteP = document.createElement('p');
+                    noteP.className = 'note';
+                    noteP.textContent = product.sellNote;
+                    sellDiv.appendChild(noteP);
+                }
+                
+                row.appendChild(infoDiv);
+                row.appendChild(buyDiv);
+                row.appendChild(sellDiv);
+                container.appendChild(row);
+            });
+        }
+
+        // TradingView 위젯 생성 및 데이터 가져오기
+        function createTradingViewWidget(symbol) {
+            const container = document.createElement('div');
+            container.style.display = 'none';
+            document.body.appendChild(container);
+            
+            new TradingView.widget({
+                "autosize": true,
+                "symbol": symbol,
+                "interval": "D",
+                "timezone": "Asia/Seoul",
+                "theme": "dark",
+                "style": "1",
+                "locale": "kr",
+                "hide_top_toolbar": true,
+                "hide_legend": true,
+                "container_id": container.id,
+                "disabled_features": ["all"],
+                "enabled_features": [],
+                "withdateranges": false,
+                "save_image": false,
+                "callback": function(widget) {
+                    widget.onChartReady(function() {
+                        // 차트가 준비되면 데이터 가져오기
+                        const price = widget.chart().crossHairPrice();
+                        const change = widget.chart().priceChange();
+                        updateGoldPrices(symbol, price.price, change.percent);
+                        
+                        // 데이터 변경 시 업데이트
+                        widget.chart().onSymbolChange().subscribe(null, function() {
+                            const updatedPrice = widget.chart().crossHairPrice();
+                            const updatedChange = widget.chart().priceChange();
+                            updateGoldPrices(symbol, updatedPrice.price, updatedChange.percent);
+                        });
+                    });
+                }
+            });
+            
+            // ID 생성 및 반환
+            container.id = 'tv_' + symbol.replace(':', '_');
+            return container.id;
+        }
+
+        // 모든 금속에 대해 TradingView 위젯 생성
+        document.addEventListener('DOMContentLoaded', function() {
+            // 각 금속 유형에 대한 위젯 생성
+            for (const symbol in goldData) {
+                createTradingViewWidget(symbol);
+            }
+            
+            // 5분마다 페이지 새로고침 (데이터 업데이트)
+            setInterval(function() {
+                location.reload();
+            }, 5 * 60 * 1000);
+        });
+    </script>
+</body>
+</html>
