@@ -90,72 +90,102 @@
         
         <div class="footer">
             <p>※ 시세는 시장 상황에 따라 예고 없이 변동될 수 있습니다.</p>
-            <p>※ 데이터 출처: CoinGecko API</p>
+            <p>※ 데이터 출처: MetalsAPI</p>
         </div>
     </div>
 
     <script>
-async function fetchMetalPrices() {
-    try {
-        const apiUrl = "https://api.coingecko.com/api/v3/simple/price?ids=gold,silver,platinum&vs_currencies=krw&include_24hr_change=true";
-        const response = await fetch(apiUrl);
+        // 금속 시세 API 정보
+        const apiKey = 'ytv8yfsfr4pdl026z2doc641nko13wj0h4whwebidhkxgnfi8n53q5yjayfy'; // 실제 API 키 입력
+        const apiEndpoint = 'https://metals-api.com/api/latest';
+        const symbols = 'XAU,XAG,XPT'; // 금, 은, 백금
+        const baseCurrency = 'KRW'; // 원화 기준
+        
+        // 이전 가격 저장 (변화율 계산용)
+        let previousRates = {};
 
-        console.log("📢 HTTP 상태 코드:", response.status);
+        async function fetchMetalPrices() {
+            try {
+                const corsProxy = 'https://corsproxy.io/?';
+                const apiUrl = `${apiEndpoint}?access_key=${apiKey}&base=${baseCurrency}&symbols=${symbols}`;
 
-        if (!response.ok) {
-            throw new Error(`HTTP 오류 발생: ${response.status}`);
+                const response = await fetch(corsProxy + encodeURIComponent(apiUrl));
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('last-updated').textContent = getCurrentDateTime();
+                    
+                    // 이전 데이터 저장
+                    const oldRates = { ...previousRates };
+                    previousRates = { ...data.rates };
+                    
+                    renderGoldRates(data.rates, oldRates);
+                } else {
+                    throw new Error(data.error?.info || '알 수 없는 오류');
+                }
+            } catch (error) {
+                console.error('API 호출 오류:', error);
+                document.getElementById('gold-rates').innerHTML = 
+                    `<div class="error">데이터를 불러올 수 없습니다: ${error.message}</div>`;
+            }
         }
 
-        const data = await response.json();
-        console.log("📢 API 응답 데이터:", data);
+        // 금속 시세를 렌더링하는 함수
+        function renderGoldRates(rates, oldRates) {
+            const container = document.getElementById('gold-rates');
+            container.innerHTML = '';
 
-        if (!data || Object.keys(data).length === 0) {
-            throw new Error("API 응답이 비어 있습니다.");
-        }
+            function calculateChange(symbol) {
+                if (!oldRates[symbol] || !rates[symbol]) return 0;
+                return ((rates[symbol] - oldRates[symbol]) / oldRates[symbol]) * 100;
+            }
 
-        // ✅ 정확한 1g당 가격 변환 적용 (온스 → 1g 변환)
-        const goldPrice = data.gold?.krw > 0 ? (data.gold.krw / 31.1035) : 92000;
-        const silverPrice = data.silver?.krw > 0 ? (data.silver.krw / 31.1035) : 1100;
-        const platinumPrice = data.platinum?.krw > 0 ? (data.platinum.krw / 31.1035) : 35000;
+            // 가격 변환 (온스 → 1g 변환)
+            const goldPrice = rates["XAU"] ? rates["XAU"] / 31.1035 : 92000;
+            const silverPrice = rates["XAG"] ? rates["XAG"] / 31.1035 : 1100;
+            const platinumPrice = rates["XPT"] ? rates["XPT"] / 31.1035 : 35000;
 
-        const metalPrices = { gold: goldPrice, silver: silverPrice, platinum: platinumPrice };
-        console.log("📢 보정된 금속 가격:", metalPrices);
+            const metals = {
+                GOLD: { price: goldPrice, symbol: "XAU" },
+                SILVER: { price: silverPrice, symbol: "XAG" },
+                PLATINUM: { price: platinumPrice, symbol: "XPT" }
+            };
 
-        if (typeof renderGoldRates === "function") {
-            renderGoldRates(metalPrices);
-        } else {
-            console.error("🚨 renderGoldRates 함수가 정의되지 않음.");
-        }
-    } catch (error) {
-        console.error("🚨 API 호출 오류:", error);
-        document.getElementById("gold-rates").innerHTML = "<div class='error'>데이터를 불러올 수 없습니다.</div>";
-    }
-}
+            Object.keys(metals).forEach((metal) => {
+                const { price, symbol } = metals[metal];
+                const priceChange = calculateChange(symbol);
 
-
-
-        // 📌 금속 시세를 HTML에 렌더링하는 함수 (오류 수정됨)
-        function renderGoldRates(metalPrices) {
-            const container = document.getElementById("gold-rates");
-            container.innerHTML = ""; // 기존 데이터 초기화
-
-            Object.keys(metalPrices).forEach((key) => {
-                const value = metalPrices[key];
-                const row = document.createElement("div");
-                row.className = "metal-row";
-                row.innerHTML = `<div class="metal-info"><strong>${key.toUpperCase()}</strong></div>
-                                 <div class="price-value">${value.toLocaleString()} 원</div>`;
+                const row = document.createElement('div');
+                row.className = 'metal-row';
+                row.innerHTML = `
+                    <div class="metal-info"><strong>${metal}</strong></div>
+                    <div class="price-value">${formatNumber(price)} 원</div>
+                `;
                 container.appendChild(row);
             });
-
-            console.log("✅ 금속 시세가 정상적으로 렌더링됨.");
         }
 
-        // 📌 페이지가 로드될 때 실행
-        document.addEventListener("DOMContentLoaded", () => {
-            console.log("🟢 DOMContentLoaded 실행됨");
+        // 숫자 형식 지정 (천 단위 콤마 추가)
+        function formatNumber(num) {
+            return Math.round(num).toLocaleString();
+        }
+
+        // 현재 날짜 및 시간 반환
+        function getCurrentDateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            
+            return `${year}.${month}.${day} ${hours}:${minutes}`;
+        }
+
+        // 페이지 로드 시 실행
+        document.addEventListener('DOMContentLoaded', function() {
             fetchMetalPrices();
-            setInterval(fetchMetalPrices, 5 * 60 * 1000); // 5분마다 업데이트
+            setInterval(fetchMetalPrices, 300000); // 5분마다 갱신
         });
     </script>
 </body>
