@@ -128,17 +128,18 @@
             {
                 metal: '순금시세',
                 spec: 'Gold24k-3.75g',
-                buyPrice: 500000,    // 3.75g당 매수가 (VAT 포함)
-                sellPrice: 475000,   // 3.75g당 매도가
-                change: -0.5         // 변동률(%)
+                buyPrice: 591000,    // 실제 시세에 맞게 조정: 591,000원
+                sellPrice: 510000,   // 실제 시세에 맞게 조정: 510,000원
+                change: -1.35        // 변동률도 실제 값으로 조정
             },
+            // 다른 제품도 비율에 맞게 조정
             {
                 metal: '18K 금시세',
                 spec: 'Gold18k-3.75g',
                 productUse: '제품시세적용',
-                buyPrice: 375000,    // 3.75g당 매수가 (VAT 포함)
-                sellPrice: 356250,   // 3.75g당 매도가
-                change: -0.5
+                buyPrice: 443250,    // 순금의 75%
+                sellPrice: 382500,   // 매도가도 순금의 75%
+                change: -1.35
             },
             {
                 metal: '14K 금시세',
