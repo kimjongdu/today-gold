@@ -130,30 +130,35 @@ fetchMetalPrices()<!DOCTYPE html>
         ];
 
         let previousPrices = {};
-
+        
         async function fetchMetalPrices() {
             try {
                 const apiUrl = "https://api.coingecko.com/api/v3/simple/price?ids=gold,silver,platinum&vs_currencies=krw&include_24hr_change=true";
                 const response = await fetch(apiUrl);
                 const data = await response.json();
         
-                // API 응답 데이터 출력 (디버깅용)
-                console.log("API 응답 데이터:", data);
+                console.log("API 응답 데이터:", data); // 응답 확인용
         
-                if (!data || Object.keys(data).length === 0) {
-                    throw new Error("API 응답이 비어 있습니다.");
+                if (!data.gold || !data.silver) {
+                    throw new Error("API 응답 데이터가 올바르지 않습니다.");
                 }
         
-                if (!data.gold || !data.silver || !data.platinum) {
-                    throw new Error("API 응답 데이터에 gold, silver, platinum이 없습니다.");
-                }
+                // ✅ 환율 보정 (1 / krw 적용)
+                const metalPrices = {
+                    gold: data.gold.krw > 0 ? (1 / data.gold.krw) : 0,
+                    silver: data.silver.krw > 0 ? (1 / data.silver.krw) : 0,
+                    platinum: data.platinum && data.platinum.krw > 0 ? (1 / data.platinum.krw) : 0
+                };
         
-                renderGoldRates(data);
+                console.log("보정된 금속 가격:", metalPrices);
+        
+                renderGoldRates(metalPrices);
             } catch (error) {
                 console.error("API 호출 오류:", error);
                 document.getElementById("gold-rates").innerHTML = "<div class='error'>데이터를 불러올 수 없습니다.</div>";
             }
         }
+
 
 
         function renderGoldRates(prices, changes) {
