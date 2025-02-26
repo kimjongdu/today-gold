@@ -314,38 +314,25 @@
                     return; // 해당 금속 데이터가 없으면 건너뛰기
                 }
                 
-                // 1g당 원화 가격으로 변환 (API는 1 KRW당 온스 가격을 반환)
-                const pricePerGram = (1 / rate) * 31.1035 * 1450; // 환율 및 단위 보정
+                // 1g당 원화 가격으로 변환 
+                const ouncesToGrams = 31.1035; // 트로이 온스를 그램으로 변환
+                
+                // 보정 계수 설정 (실제 시세에 맞게 조정)
+                const correctionFactors = {
+                    'XAU': 0.000013, // 금 보정 계수 (순금 3.75g이 약 50만원 기준)
+                    'XAG': 0.00013,  // 은 보정 계수
+                    'XPT': 0.000026  // 백금 보정 계수
+                };
+                
+                // 보정된 1g당 가격 계산
+                const pricePerGram = (1 / rate) / ouncesToGrams * correctionFactors[product.apiSymbol];
                 logDebug(`${product.metal} 1g당 가격`, pricePerGram);
                 
                 // 변화율 (양수는 가격이 내려갔음을 의미, 음수는 가격이 올랐음을 의미)
                 const priceChange = calculateChange(product.apiSymbol);
                 logDebug(`${product.metal} 변화율`, priceChange);
                 
-                // 행 생성
-                const row = document.createElement('div');
-                row.className = 'metal-row';
-                
-                // 금속 정보
-                const infoDiv = document.createElement('div');
-                infoDiv.className = 'metal-info';
-                
-                const nameP = document.createElement('p');
-                nameP.className = 'metal-name';
-                nameP.textContent = product.metal;
-                infoDiv.appendChild(nameP);
-                
-                const specP = document.createElement('p');
-                specP.className = 'metal-spec';
-                specP.textContent = product.spec;
-                infoDiv.appendChild(specP);
-                
-                if (product.productUse) {
-                    const useP = document.createElement('p');
-                    useP.className = 'product-use';
-                    useP.textContent = product.productUse;
-                    infoDiv.appendChild(useP);
-                }
+       
                 
                 // 매수가 (살 때 가격)
                 const buyDiv = document.createElement('div');
