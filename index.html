@@ -95,42 +95,43 @@
     </div>
 
     <script>
-        async function fetchMetalPrices() {
-            try {
-                const apiUrl = "https://api.coingecko.com/api/v3/simple/price?ids=gold,silver,platinum&vs_currencies=krw&include_24hr_change=true";
-                const response = await fetch(apiUrl);
-        
-                console.log("📢 HTTP 상태 코드:", response.status);
-        
-                if (!response.ok) {
-                    throw new Error(`HTTP 오류 발생: ${response.status}`);
-                }
-        
-                const data = await response.json();
-                console.log("📢 API 응답 데이터:", data);
-        
-                if (!data || Object.keys(data).length === 0) {
-                    throw new Error("API 응답이 비어 있습니다.");
-                }
-        
-                // ✅ 온스 → 1g 변환 (API는 1 KRW당 온스 가격을 반환함)
-                const goldPrice = data.gold?.krw > 0 ? (1 / data.gold.krw) * 31.1035 : 92000;
-                const silverPrice = data.silver?.krw > 0 ? (1 / data.silver.krw) * 31.1035 : 1100;
-                const platinumPrice = data.platinum?.krw > 0 ? (1 / data.platinum.krw) * 31.1035 : 35000;
-        
-                const metalPrices = { gold: goldPrice, silver: silverPrice, platinum: platinumPrice };
-                console.log("📢 보정된 금속 가격:", metalPrices);
-        
-                if (typeof renderGoldRates === "function") {
-                    renderGoldRates(metalPrices);
-                } else {
-                    console.error("🚨 renderGoldRates 함수가 정의되지 않음.");
-                }
-            } catch (error) {
-                console.error("🚨 API 호출 오류:", error);
-                document.getElementById("gold-rates").innerHTML = "<div class='error'>데이터를 불러올 수 없습니다.</div>";
-            }
+async function fetchMetalPrices() {
+    try {
+        const apiUrl = "https://api.coingecko.com/api/v3/simple/price?ids=gold,silver,platinum&vs_currencies=krw&include_24hr_change=true";
+        const response = await fetch(apiUrl);
+
+        console.log("📢 HTTP 상태 코드:", response.status);
+
+        if (!response.ok) {
+            throw new Error(`HTTP 오류 발생: ${response.status}`);
         }
+
+        const data = await response.json();
+        console.log("📢 API 응답 데이터:", data);
+
+        if (!data || Object.keys(data).length === 0) {
+            throw new Error("API 응답이 비어 있습니다.");
+        }
+
+        // ✅ 정확한 1g당 가격 변환 적용 (온스 → 1g 변환)
+        const goldPrice = data.gold?.krw > 0 ? (data.gold.krw / 31.1035) : 92000;
+        const silverPrice = data.silver?.krw > 0 ? (data.silver.krw / 31.1035) : 1100;
+        const platinumPrice = data.platinum?.krw > 0 ? (data.platinum.krw / 31.1035) : 35000;
+
+        const metalPrices = { gold: goldPrice, silver: silverPrice, platinum: platinumPrice };
+        console.log("📢 보정된 금속 가격:", metalPrices);
+
+        if (typeof renderGoldRates === "function") {
+            renderGoldRates(metalPrices);
+        } else {
+            console.error("🚨 renderGoldRates 함수가 정의되지 않음.");
+        }
+    } catch (error) {
+        console.error("🚨 API 호출 오류:", error);
+        document.getElementById("gold-rates").innerHTML = "<div class='error'>데이터를 불러올 수 없습니다.</div>";
+    }
+}
+
 
 
         // 📌 금속 시세를 HTML에 렌더링하는 함수 (오류 수정됨)
