@@ -293,6 +293,82 @@
                 renderGoldRates();
             }, 300000);
         });
+
+// 백업 데이터 (API 실패 시 사용)
+const backupData = [
+    {
+        metal: '순금시세',
+        spec: 'Gold24k-3.75g',
+        buyPrice: 591000,
+        sellPrice: 510000,
+        buyChange: -1.35,
+        sellChange: -2.94,
+        buyDiff: 8000,
+        sellDiff: 15000
+    },
+    // 다른 금속 정보...
+];
+
+// 페이지 로드 시 실행
+document.addEventListener('DOMContentLoaded', function() {
+    // 날짜 표시
+    updateDateTime();
+    
+    // 로컬 스토리지에서 저장된 데이터 확인
+    const savedData = localStorage.getItem('metalRates');
+    if (savedData) {
+        // 저장된 데이터가 있으면 먼저 표시
+        try {
+            const parsedData = JSON.parse(savedData);
+            renderMetalRates(parsedData);
+            console.log('로컬 스토리지 데이터 로드 성공');
+        } catch (e) {
+            console.error('로컬 스토리지 데이터 파싱 오류:', e);
+            // 파싱 실패 시 백업 데이터 사용
+            renderMetalRates(backupData);
+        }
+    } else {
+        // 저장된 데이터가 없으면 백업 데이터 사용
+        renderMetalRates(backupData);
+    }
+    
+    // API 호출 시도
+    fetchMetalPrices();
+    
+    // 5분마다 업데이트 (300000ms)
+    setInterval(function() {
+        updateDateTime();
+        fetchMetalPrices();
+    }, 300000);
+});
+
+// 날짜 업데이트
+function updateDateTime() {
+    const currentTime = getCurrentDateTime();
+    document.getElementById('last-updated').textContent = currentTime;
+    document.getElementById('update-time').textContent = currentTime;
+}
+
+// API에서 금속 가격 가져오기
+async function fetchMetalPrices() {
+    try {
+        console.log('API 호출 시작');
+        
+        // 여기에 실제 API 호출 코드 (기존 코드 사용)
+        // ...
+        
+        // API 호출 성공 시 로컬 스토리지에 저장
+        localStorage.setItem('metalRates', JSON.stringify(data));
+        console.log('API 데이터 저장 성공');
+        
+        // 데이터 렌더링
+        renderMetalRates(data);
+    } catch (error) {
+        console.error('API 호출 오류:', error);
+        // 오류 발생 시 백업 데이터 사용 (이미 초기에 표시되어 있으므로 중복 렌더링 방지)
+    }
+}
+        
     </script>
 </body>
 </html>
