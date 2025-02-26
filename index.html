@@ -1,3 +1,136 @@
+fetchMetalPrices()<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한국금거래소 시세 라인업</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h2 {
+            text-align: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        #last-updated {
+            text-align: right;
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+        .header {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        .header div {
+            flex: 1;
+            text-align: center;
+        }
+        .header div:first-child {
+            text-align: left;
+        }
+        .metal-row {
+            display: flex;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #222;
+        }
+        .metal-info {
+            flex: 1;
+        }
+        .metal-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+        }
+        .metal-spec {
+            font-size: 12px;
+            color: #aaa;
+            margin: 0;
+        }
+        .buy-price, .sell-price {
+            flex: 1;
+            text-align: right;
+        }
+        .price-value {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+        }
+        .price-change {
+            font-size: 12px;
+            margin: 0;
+        }
+        .down {
+            color: #4cc3ff;
+        }
+        .up {
+            color: #ff4c4c;
+        }
+        .no-change {
+            color: #ffcc00;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #888;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #aaa;
+        }
+        .error {
+            text-align: center;
+            padding: 20px;
+            color: #ff4c4c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>한국금거래소 시세 라인업</h2>
+        <p id="last-updated"></p>
+        
+        <div class="header">
+            <div></div>
+            <div>내가 살 때 (VAT포함)</div>
+            <div>내가 팔 때 (국방공과 기준)</div>
+        </div>
+        
+        <div id="gold-rates">
+            <div class="loading">데이터를 불러오는 중...</div>
+        </div>
+        
+        <div class="footer">
+            <p>※ 시세는 시장 상황에 따라 예고 없이 변동될 수 있습니다.</p>
+            <p>※ 데이터 출처: CoinGecko API</p>
+        </div>
+    </div>
+
+    <script>
+        const goldProducts = [
+            { metal: '순금시세', spec: 'Gold24k-3.75g', apiId: 'gold', purityFactor: 1.0, vatFactor: 1.1, sellFactor: 0.95 },
+            { metal: '18K 금시세', spec: 'Gold18k-3.75g', apiId: 'gold', purityFactor: 0.75, vatFactor: 1.1, sellFactor: 0.95 },
+            { metal: '14K 금시세', spec: 'Gold14k-3.75g', apiId: 'gold', purityFactor: 0.585, vatFactor: 1.1, sellFactor: 0.95 },
+            { metal: '백금시세', spec: 'Platinum-3.75g', apiId: 'platinum', purityFactor: 1.0, vatFactor: 1.1, sellFactor: 0.95 },
+            { metal: '은시세', spec: 'Silver-3.75g', apiId: 'silver', purityFactor: 1.0, vatFactor: 1.1, sellFactor: 0.95 }
+        ];
+
+        let previousPrices = {};
+        
 async function fetchMetalPrices() {
     try {
         const apiUrl = "https://api.coingecko.com/api/v3/simple/price?ids=gold,silver,platinum&vs_currencies=krw&include_24hr_change=true";
@@ -10,27 +143,66 @@ async function fetchMetalPrices() {
         const data = await response.json();
         console.log("API 응답 데이터:", data); // 🟢 API 응답 로그 확인
 
-        // ✅ 응답 데이터 검증
+        // ✅ API 응답 데이터가 비어 있는 경우 처리
         if (!data || Object.keys(data).length === 0) {
             throw new Error("API 응답이 비어 있습니다.");
         }
 
-        // ✅ 금(Gold) 변환 (트로이 온스 -> 1g 가격 변환)
+        // ✅ gold, silver 가격 변환 (온스 → 1g 기준으로 조정)
         const goldPrice = data.gold?.krw > 0 ? (1 / data.gold.krw) / 31.1035 : 92000;
-
-        // ✅ 은(Silver) 변환 (온스 기준 가격을 1g으로 변환)
-        let silverPrice = data.silver?.krw > 0 ? (1 / data.silver.krw) / 31.1035 : 1100;
-
-        // ✅ 백금(Platinum) 값이 없는 경우 기본값 설정
+        const silverPrice = data.silver?.krw > 0 ? (1 / data.silver.krw) / 31.1035 : 1100;
         const platinumPrice = data.platinum?.krw > 0 ? (1 / data.platinum.krw) : 35000;
 
-        // ✅ 변환된 금속 가격
+        // ✅ 변환된 금속 가격 출력
         const metalPrices = { gold: goldPrice, silver: silverPrice, platinum: platinumPrice };
-        console.log("보정된 금속 가격:", metalPrices);
+        console.log("📢 보정된 금속 가격:", metalPrices);
 
         renderGoldRates(metalPrices);
     } catch (error) {
-        console.error("API 호출 오류:", error);
+        console.error("🚨 API 호출 오류:", error);
         document.getElementById("gold-rates").innerHTML = "<div class='error'>데이터를 불러올 수 없습니다.</div>";
     }
 }
+
+
+
+
+        function renderGoldRates(prices, changes) {
+            const container = document.getElementById('gold-rates');
+            container.innerHTML = '';
+
+            goldProducts.forEach(product => {
+                const metalPrice = prices[product.apiId] || 0;
+                const priceChange = changes[product.apiId] || 0;
+                const buyPrice = metalPrice * 3.75 * product.purityFactor * product.vatFactor;
+                const sellPrice = metalPrice * 3.75 * product.purityFactor * product.sellFactor;
+                const changeClass = priceChange < 0 ? 'down' : priceChange > 0 ? 'up' : 'no-change';
+                const arrow = priceChange < 0 ? '▼' : priceChange > 0 ? '▲' : '-';
+
+                const row = `
+                    <div class="metal-row">
+                        <div class="metal-info">
+                            <p class="metal-name">${product.metal}</p>
+                            <p class="metal-spec">${product.spec}</p>
+                        </div>
+                        <div class="buy-price">
+                            <p class="price-value">${buyPrice.toLocaleString()}원</p>
+                            <p class="price-change ${changeClass}">${priceChange.toFixed(2)}% ${arrow}</p>
+                        </div>
+                        <div class="sell-price">
+                            <p class="price-value">${sellPrice.toLocaleString()}원</p>
+                            <p class="price-change ${changeClass}">${priceChange.toFixed(2)}% ${arrow}</p>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += row;
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchMetalPrices();
+            setInterval(fetchMetalPrices, 5 * 60 * 1000);
+        });
+    </script>
+</body>
+</html>
