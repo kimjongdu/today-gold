@@ -325,25 +325,23 @@ function renderGoldRates(rates, oldRates) {
         return ((oldRates[symbol] - rates[symbol]) / oldRates[symbol]) * 100;
     }
     
-    // 목표 순금 가격 (3.75g, 내가 살 때 기준)
-    const targetGoldPrice = 591000;
+    // 목표 가격 (내가 살 때 기준)
+    const targetPrices = {
+        '순금시세': 591000,    // 순금 3.75g 매수가
+        '18K 금시세': 0,       // 18K 매수가는 표시 안함
+        '14K 금시세': 0,       // 14K 매수가는 표시 안함
+        '백금시세': 206250,     // 백금 3.75g 매수가
+        '은시세': 6375        // 은 3.75g 매수가
+    };
     
-    // 만약 XAU(금) 데이터가 있다면 조정 계수 계산
-    let adjustmentFactor = 1;
-    if (rates.XAU) {
-        // 현재 API에서 받아온 금 가격 (3.75g)
-        const gramsPerOunce = 31.1035;
-        const currentGoldPricePerGram = rates.XAU / gramsPerOunce;
-        const currentGoldPrice375g = currentGoldPricePerGram * 3.75;
-        
-        // VAT 포함된 현재 가격 계산 (제품 정보에서 vatFactor 가져옴)
-        const vatFactor = goldProducts[0].vatFactor; // 순금의 VAT 계수 (1.1)
-        const currentGoldPrice375gWithVAT = currentGoldPrice375g * vatFactor;
-        
-        // 목표 가격으로 조정하기 위한 계수 계산 (VAT 포함 가격 기준)
-        adjustmentFactor = targetGoldPrice / currentGoldPrice375gWithVAT;
-        console.log('조정 계수:', adjustmentFactor);
-    }
+    // 목표 매도가 (내가 팔 때 기준)
+    const targetSellPrices = {
+        '순금시세': 510000,    // 순금 3.75g 매도가
+        '18K 금시세': 375000,  // 18K 3.75g 매도가
+        '14K 금시세': 290700,  // 14K 3.75g 매도가
+        '백금시세': 195938,    // 백금 3.75g 매도가
+        '은시세': 6056        // 은 3.75g 매도가
+    };
     
     // 각 제품별 시세 표시
     goldProducts.forEach(function(product) {
@@ -353,22 +351,6 @@ function renderGoldRates(rates, oldRates) {
             console.log(`${product.apiSymbol} 데이터 없음`);
             return; // 해당 금속 데이터가 없으면 건너뛰기
         }
-        
-        // 트로이 온스당 원화 가격
-        console.log(`${product.metal} 1온스 가격:`, rate);
-        
-        // 1g당 가격 계산
-        const gramsPerOunce = 31.1035;
-        const pricePerGram = rate / gramsPerOunce;
-        console.log(`${product.metal} 1g 가격:`, pricePerGram);
-        
-        // 3.75g당 가격 계산
-        const price375g = pricePerGram * 3.75;
-        console.log(`${product.metal} 3.75g 가격(조정 전):`, price375g);
-        
-        // 조정된 가격 계산
-        const adjustedPrice375g = price375g * adjustmentFactor;
-        console.log(`${product.metal} 3.75g 가격(조정 후):`, adjustedPrice375g);
         
         // 변화율 (양수는 가격이 내려갔음을 의미, 음수는 가격이 올랐음을 의미)
         const priceChange = calculateChange(product.apiSymbol);
@@ -403,20 +385,19 @@ function renderGoldRates(rates, oldRates) {
         const buyDiv = document.createElement('div');
         buyDiv.className = 'buy-price';
         
-        // 순도와 VAT 적용
-        const buyPrice = adjustedPrice375g * product.purityFactor;
+        const buyPrice = targetPrices[product.metal];
         
-        if (product.vatFactor > 0) {
+        if (buyPrice > 0) {
             const buyPriceP = document.createElement('p');
             buyPriceP.className = 'price-value';
             buyPriceP.textContent = formatNumber(buyPrice) + '원';
             buyDiv.appendChild(buyPriceP);
             
             const buyChangeP = document.createElement('p');
-            const changeClass = priceChange > 0 ? 'down' : (priceChange < 0 ? 'up' : 'no-change');
+            const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
             buyChangeP.className = 'price-change ' + changeClass;
             
-            const arrow = priceChange > 0 ? '▼' : (priceChange < 0 ? '▲' : '-');
+            const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
             const diffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
             buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(diffAmount);
             buyDiv.appendChild(buyChangeP);
@@ -426,22 +407,23 @@ function renderGoldRates(rates, oldRates) {
         const sellDiv = document.createElement('div');
         sellDiv.className = 'sell-price';
         
-        // 순도와 판매 계수 적용
-        const sellPrice = adjustedPrice375g * product.purityFactor * product.sellFactor;
+        const sellPrice = targetSellPrices[product.metal];
         
-        const sellPriceP = document.createElement('p');
-        sellPriceP.className = 'price-value';
-        sellPriceP.textContent = formatNumber(sellPrice) + '원';
-        sellDiv.appendChild(sellPriceP);
-        
-        const sellChangeP = document.createElement('p');
-        const changeClass = priceChange > 0 ? 'down' : (priceChange < 0 ? 'up' : 'no-change');
-        sellChangeP.className = 'price-change ' + changeClass;
-        
-        const arrow = priceChange > 0 ? '▼' : (priceChange < 0 ? '▲' : '-');
-        const sellDiffAmount = Math.abs(Math.round(sellPrice * priceChange / 100 / 1000) * 1000);
-        sellChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(sellDiffAmount);
-        sellDiv.appendChild(sellChangeP);
+        if (sellPrice > 0) {
+            const sellPriceP = document.createElement('p');
+            sellPriceP.className = 'price-value';
+            sellPriceP.textContent = formatNumber(sellPrice) + '원';
+            sellDiv.appendChild(sellPriceP);
+            
+            const sellChangeP = document.createElement('p');
+            const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
+            sellChangeP.className = 'price-change ' + changeClass;
+            
+            const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
+            const sellDiffAmount = Math.abs(Math.round(sellPrice * priceChange / 100 / 1000) * 1000);
+            sellChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(sellDiffAmount);
+            sellDiv.appendChild(sellChangeP);
+        }
         
         if (product.sellNote) {
             const noteP = document.createElement('p');
