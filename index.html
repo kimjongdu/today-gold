@@ -454,23 +454,21 @@
                 const buyDiv = document.createElement('div');
                 buyDiv.className = 'buy-price';
                 
-                // 18K, 14K 금시세는 매수가를 표시하지 않음
-                if (product.metal !== '18K 금시세' && product.metal !== '14K 금시세') {
-                    const buyPriceP = document.createElement('p');
-                    buyPriceP.className = 'price-value';
-                    buyPriceP.textContent = formatNumber(buyPrice) + '원';
-                    buyDiv.appendChild(buyPriceP);
-                    
-                    // 변화율 표시 (항상 표시)
-                    const buyChangeP = document.createElement('p');
-                    const buyChangeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
-                    buyChangeP.className = 'price-change ' + buyChangeClass;
-                    
-                    const buyArrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
-                    const buyDiffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
-                    buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + buyArrow + ' ' + formatNumber(buyDiffAmount);
-                    buyDiv.appendChild(buyChangeP);
-                }
+                // 모든 금속에 대해 매수가 표시 (18K, 14K 포함)
+                const buyPriceP = document.createElement('p');
+                buyPriceP.className = 'price-value';
+                buyPriceP.textContent = formatNumber(buyPrice) + '원';
+                buyDiv.appendChild(buyPriceP);
+                
+                // 변화율 표시 (항상 표시)
+                const buyChangeP = document.createElement('p');
+                const buyChangeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
+                buyChangeP.className = 'price-change ' + buyChangeClass;
+                
+                const buyArrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
+                const buyDiffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
+                buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + buyArrow + ' ' + formatNumber(buyDiffAmount);
+                buyDiv.appendChild(buyChangeP);
                 
                 // 매도가 (팔 때 가격)
                 const sellDiv = document.createElement('div');
