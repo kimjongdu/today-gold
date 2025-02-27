@@ -361,7 +361,7 @@
                 buyDiv.className = 'buy-price';
                 
                 // 18K, 14K 금시세는 매수가 표시 안함
-                const shouldShowBuyPrice = product.metal !== '18K 금시세' && product.metal !== '14K 금시세';
+                const shouldShowBuyPrice = true;  // 조건 제거하고 항상 true로 설정
                 
                 if (shouldShowBuyPrice) {
                     const buyPriceP = document.createElement('p');
