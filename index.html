@@ -110,7 +110,7 @@
         
         <div class="header">
             <div>금속</div>
-            <div>내가 살 때 (VAT포함)</div>
+            <div>내가 살 때 (순수시세)</div>
             <div>내가 팔 때 (국방공과 기준)</div>
         </div>
         
@@ -135,7 +135,7 @@
         let previousRates = {};
         
         // 보정 계수 (API 데이터를 실제 시세에 맞추기 위함)
-        // 순금 3.75g 가격이 591,000원이 되도록 조정
+        // 순금 3.75g 가격이 590,000원이 되도록 조정 (부가세 제외)
         const CALIBRATION_FACTOR = {
             XAU: 1.0,     // 기준값(조정 필요 없음)
             XAG: 1.0,     // 은 보정 계수
@@ -235,7 +235,7 @@
                 return getBackupRates();
             }
             
-            const targetGoldPrice = 591000; // 목표 금가격 (3.75g 당 591,000원)
+            const targetGoldPrice = 590000; // 목표 금가격 (3.75g 당 590,000원, 부가세 제외)
             const gramsPerOunce = 31.1035;
             
             // 1g당 현재 골드 가격 계산
@@ -258,9 +258,9 @@
         // 백업 데이터 (API 실패 시 사용)
         function getBackupRates() {
             return {
-                XAU: 4425000, // 순금 1 트로이 온스당 가격 (약 142,000원/g, 3.75g=532,500원)
-                XAG: 55000,   // 은 1 트로이 온스당 가격
-                XPT: 2700000  // 백금 1 트로이 온스당 가격
+                XAU: 4025000, // 순금 1 트로이 온스당 가격 (부가세 제외)
+                XAG: 50000,   // 은 1 트로이 온스당 가격
+                XPT: 2450000  // 백금 1 트로이 온스당 가격
             };
         }
 
@@ -271,7 +271,7 @@
                 spec: 'Gold24k-3.75g',
                 apiSymbol: 'XAU',
                 purityFactor: 1.0,
-                vatFactor: 1.1,     // VAT 10%
+                vatFactor: 1.0,     // 부가세 제외
                 sellFactor: 0.95     // 매도가는 매수가의 95%
             },
             {
@@ -297,7 +297,7 @@
                 spec: 'Platinum-3.75g',
                 apiSymbol: 'XPT',
                 purityFactor: 1.0,
-                vatFactor: 1.1,
+                vatFactor: 1.0,      // 부가세 제외
                 sellFactor: 0.95,
                 sellNote: '(자사백금바기준)'
             },
@@ -306,140 +306,140 @@
                 spec: 'Silver-3.75g',
                 apiSymbol: 'XAG',
                 purityFactor: 1.0,
-                vatFactor: 1.1,
+                vatFactor: 1.0,      // 부가세 제외
                 sellFactor: 0.95,
                 sellNote: '(자사실버바기준)'
             }
         ];
 
-// 시세 정보 렌더링
-function renderGoldRates(rates, oldRates) {
-    console.log('시세 정보 렌더링', rates);
-    
-    const container = document.getElementById('gold-rates');
-    container.innerHTML = '';
-    
-    // 변화율 계산 함수
-    function calculateChange(symbol) {
-        if (!oldRates[symbol] || !rates[symbol]) return 0;
-        return ((oldRates[symbol] - rates[symbol]) / oldRates[symbol]) * 100;
-    }
-    
-    // 목표 가격 (내가 살 때 기준)
-    const targetPrices = {
-        '순금시세': 591000,    // 순금 3.75g 매수가
-        '18K 금시세': 0,       // 18K 매수가는 표시 안함
-        '14K 금시세': 0,       // 14K 매수가는 표시 안함
-        '백금시세': 206250,     // 백금 3.75g 매수가
-        '은시세': 6375        // 은 3.75g 매수가
-    };
-    
-    // 목표 매도가 (내가 팔 때 기준)
-    const targetSellPrices = {
-        '순금시세': 510000,    // 순금 3.75g 매도가
-        '18K 금시세': 375000,  // 18K 3.75g 매도가
-        '14K 금시세': 290700,  // 14K 3.75g 매도가
-        '백금시세': 195938,    // 백금 3.75g 매도가
-        '은시세': 6056        // 은 3.75g 매도가
-    };
-    
-    // 각 제품별 시세 표시
-    goldProducts.forEach(function(product) {
-        // 금속 시세 계산
-        const rate = rates[product.apiSymbol];
-        if (!rate) {
-            console.log(`${product.apiSymbol} 데이터 없음`);
-            return; // 해당 금속 데이터가 없으면 건너뛰기
-        }
-        
-        // 변화율 (양수는 가격이 내려갔음을 의미, 음수는 가격이 올랐음을 의미)
-        const priceChange = calculateChange(product.apiSymbol);
-        console.log(`${product.metal} 변화율:`, priceChange);
-        
-        // 행 생성
-        const row = document.createElement('div');
-        row.className = 'metal-row';
-        
-        // 금속 정보
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'metal-info';
-        
-        const nameP = document.createElement('p');
-        nameP.className = 'metal-name';
-        nameP.textContent = product.metal;
-        infoDiv.appendChild(nameP);
-        
-        const specP = document.createElement('p');
-        specP.className = 'metal-spec';
-        specP.textContent = product.spec;
-        infoDiv.appendChild(specP);
-        
-        if (product.productUse) {
-            const useP = document.createElement('p');
-            useP.className = 'product-use';
-            useP.textContent = product.productUse;
-            infoDiv.appendChild(useP);
-        }
-        
-        // 매수가 (살 때 가격)
-        const buyDiv = document.createElement('div');
-        buyDiv.className = 'buy-price';
-        
-        const buyPrice = targetPrices[product.metal];
-        
-        if (buyPrice > 0) {
-            const buyPriceP = document.createElement('p');
-            buyPriceP.className = 'price-value';
-            buyPriceP.textContent = formatNumber(buyPrice) + '원';
-            buyDiv.appendChild(buyPriceP);
+        // 시세 정보 렌더링
+        function renderGoldRates(rates, oldRates) {
+            console.log('시세 정보 렌더링', rates);
             
-            const buyChangeP = document.createElement('p');
-            const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
-            buyChangeP.className = 'price-change ' + changeClass;
+            const container = document.getElementById('gold-rates');
+            container.innerHTML = '';
             
-            const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
-            const diffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
-            buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(diffAmount);
-            buyDiv.appendChild(buyChangeP);
-        }
-        
-        // 매도가 (팔 때 가격)
-        const sellDiv = document.createElement('div');
-        sellDiv.className = 'sell-price';
-        
-        const sellPrice = targetSellPrices[product.metal];
-        
-        if (sellPrice > 0) {
-            const sellPriceP = document.createElement('p');
-            sellPriceP.className = 'price-value';
-            sellPriceP.textContent = formatNumber(sellPrice) + '원';
-            sellDiv.appendChild(sellPriceP);
+            // 변화율 계산 함수
+            function calculateChange(symbol) {
+                if (!oldRates[symbol] || !rates[symbol]) return 0;
+                return ((oldRates[symbol] - rates[symbol]) / oldRates[symbol]) * 100;
+            }
             
-            const sellChangeP = document.createElement('p');
-            const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
-            sellChangeP.className = 'price-change ' + changeClass;
+            // 목표 가격 (내가 살 때 기준, 부가세 제외)
+            const targetPrices = {
+                '순금시세': 590000,    // 순금 3.75g 매수가 (부가세 제외)
+                '18K 금시세': 0,       // 18K 매수가는 표시 안함
+                '14K 금시세': 0,       // 14K 매수가는 표시 안함
+                '백금시세': 187500,     // 백금 3.75g 매수가 (부가세 제외)
+                '은시세': 5800        // 은 3.75g 매수가 (부가세 제외)
+            };
             
-            const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
-            const sellDiffAmount = Math.abs(Math.round(sellPrice * priceChange / 100 / 1000) * 1000);
-            sellChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(sellDiffAmount);
-            sellDiv.appendChild(sellChangeP);
+            // 목표 매도가 (내가 팔 때 기준)
+            const targetSellPrices = {
+                '순금시세': 510000,    // 순금 3.75g 매도가
+                '18K 금시세': 375000,  // 18K 3.75g 매도가
+                '14K 금시세': 290700,  // 14K 3.75g 매도가
+                '백금시세': 178125,    // 백금 3.75g 매도가
+                '은시세': 5510        // 은 3.75g 매도가
+            };
+            
+            // 각 제품별 시세 표시
+            goldProducts.forEach(function(product) {
+                // 금속 시세 계산
+                const rate = rates[product.apiSymbol];
+                if (!rate) {
+                    console.log(`${product.apiSymbol} 데이터 없음`);
+                    return; // 해당 금속 데이터가 없으면 건너뛰기
+                }
+                
+                // 변화율 (양수는 가격이 내려갔음을 의미, 음수는 가격이 올랐음을 의미)
+                const priceChange = calculateChange(product.apiSymbol);
+                console.log(`${product.metal} 변화율:`, priceChange);
+                
+                // 행 생성
+                const row = document.createElement('div');
+                row.className = 'metal-row';
+                
+                // 금속 정보
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'metal-info';
+                
+                const nameP = document.createElement('p');
+                nameP.className = 'metal-name';
+                nameP.textContent = product.metal;
+                infoDiv.appendChild(nameP);
+                
+                const specP = document.createElement('p');
+                specP.className = 'metal-spec';
+                specP.textContent = product.spec;
+                infoDiv.appendChild(specP);
+                
+                if (product.productUse) {
+                    const useP = document.createElement('p');
+                    useP.className = 'product-use';
+                    useP.textContent = product.productUse;
+                    infoDiv.appendChild(useP);
+                }
+                
+                // 매수가 (살 때 가격)
+                const buyDiv = document.createElement('div');
+                buyDiv.className = 'buy-price';
+                
+                const buyPrice = targetPrices[product.metal];
+                
+                if (buyPrice > 0) {
+                    const buyPriceP = document.createElement('p');
+                    buyPriceP.className = 'price-value';
+                    buyPriceP.textContent = formatNumber(buyPrice) + '원';
+                    buyDiv.appendChild(buyPriceP);
+                    
+                    const buyChangeP = document.createElement('p');
+                    const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
+                    buyChangeP.className = 'price-change ' + changeClass;
+                    
+                    const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
+                    const diffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
+                    buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(diffAmount);
+                    buyDiv.appendChild(buyChangeP);
+                }
+                
+                // 매도가 (팔 때 가격)
+                const sellDiv = document.createElement('div');
+                sellDiv.className = 'sell-price';
+                
+                const sellPrice = targetSellPrices[product.metal];
+                
+                if (sellPrice > 0) {
+                    const sellPriceP = document.createElement('p');
+                    sellPriceP.className = 'price-value';
+                    sellPriceP.textContent = formatNumber(sellPrice) + '원';
+                    sellDiv.appendChild(sellPriceP);
+                    
+                    const sellChangeP = document.createElement('p');
+                    const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
+                    sellChangeP.className = 'price-change ' + changeClass;
+                    
+                    const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
+                    const sellDiffAmount = Math.abs(Math.round(sellPrice * priceChange / 100 / 1000) * 1000);
+                    sellChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(sellDiffAmount);
+                    sellDiv.appendChild(sellChangeP);
+                }
+                
+                if (product.sellNote) {
+                    const noteP = document.createElement('p');
+                    noteP.className = 'note';
+                    noteP.textContent = product.sellNote;
+                    sellDiv.appendChild(noteP);
+                }
+                
+                row.appendChild(infoDiv);
+                row.appendChild(buyDiv);
+                row.appendChild(sellDiv);
+                container.appendChild(row);
+            });
+            
+            console.log('렌더링 완료');
         }
-        
-        if (product.sellNote) {
-            const noteP = document.createElement('p');
-            noteP.className = 'note';
-            noteP.textContent = product.sellNote;
-            sellDiv.appendChild(noteP);
-        }
-        
-        row.appendChild(infoDiv);
-        row.appendChild(buyDiv);
-        row.appendChild(sellDiv);
-        container.appendChild(row);
-    });
-    
-    console.log('렌더링 완료');
-}
 
         // 초기화 및 주기적 업데이트
         document.addEventListener('DOMContentLoaded', function() {
