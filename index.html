@@ -110,7 +110,7 @@
         
         <div class="header">
             <div>금속</div>
-            <div>내가 살 때 (순수시세)</div>
+            <div>내가 살 때 (VAT포함)</div>
             <div>내가 팔 때 (국방공과 기준)</div>
         </div>
         
@@ -228,9 +228,11 @@
         // 백업 데이터 (API 실패 시 사용)
         function getBackupRates() {
             return {
-                XAU: 4025000, // 순금 1 트로이 온스당 가격 (부가세 제외)
-                XAG: 50000,   // 은 1 트로이 온스당 가격
-                XPT: 2450000  // 백금 1 트로이 온스당 가격
+                // 역산: 594,000원(VAT 포함) ÷ 1.1(VAT 10%) = 540,000원
+                // 540,000원 × (31.1035g ÷ 3.75g) = 4,477,905원 (1 트로이온스당 가격)
+                XAU: 4477905, // 순금 1 트로이 온스당 가격 (VAT 전)
+                XAG: 55000,   // 은 1 트로이 온스당 가격
+                XPT: 2700000  // 백금 1 트로이 온스당 가격
             };
         }
 
@@ -241,7 +243,7 @@
                 spec: 'Gold24k-3.75g',
                 apiSymbol: 'XAU',
                 purityFactor: 1.0,
-                vatFactor: 1.0,     // 부가세 제외
+                vatFactor: 1.1,     // VAT 10% 포함
                 sellFactor: 0.95     // 매도가는 매수가의 95%
             },
             {
@@ -250,7 +252,7 @@
                 productUse: '제품시세적용',
                 apiSymbol: 'XAU',
                 purityFactor: 0.75,  // 75% 순도
-                vatFactor: 1.0,      // 부가세 제외
+                vatFactor: 1.1,      // VAT 10% 포함
                 sellFactor: 0.95
             },
             {
@@ -259,7 +261,7 @@
                 productUse: '제품시세적용',
                 apiSymbol: 'XAU',
                 purityFactor: 0.585, // 58.5% 순도
-                vatFactor: 1.0,      // 부가세 제외
+                vatFactor: 1.1,      // VAT 10% 포함
                 sellFactor: 0.95
             },
             {
@@ -267,7 +269,7 @@
                 spec: 'Platinum-3.75g',
                 apiSymbol: 'XPT',
                 purityFactor: 1.0,
-                vatFactor: 1.0,      // 부가세 제외
+                vatFactor: 1.1,      // VAT 10% 포함
                 sellFactor: 0.95,
                 sellNote: '(자사백금바기준)'
             },
@@ -276,7 +278,7 @@
                 spec: 'Silver-3.75g',
                 apiSymbol: 'XAG',
                 purityFactor: 1.0,
-                vatFactor: 1.0,      // 부가세 제외
+                vatFactor: 1.1,      // VAT 10% 포함
                 sellFactor: 0.95,
                 sellNote: '(자사실버바기준)'
             }
@@ -356,29 +358,24 @@
                     infoDiv.appendChild(useP);
                 }
                 
-                // 매수가 (살 때 가격)
+                // 매수가 (살 때 가격) - 모든 금속에 대해 표시
                 const buyDiv = document.createElement('div');
                 buyDiv.className = 'buy-price';
                 
-                // 18K, 14K 금시세는 매수가 표시 안함
-                const shouldShowBuyPrice = true;  // 조건 제거하고 항상 true로 설정
+                const buyPriceP = document.createElement('p');
+                buyPriceP.className = 'price-value';
+                buyPriceP.textContent = formatNumber(priceFor3_75g) + '원';
+                buyDiv.appendChild(buyPriceP);
                 
-                if (shouldShowBuyPrice) {
-                    const buyPriceP = document.createElement('p');
-                    buyPriceP.className = 'price-value';
-                    buyPriceP.textContent = formatNumber(priceFor3_75g) + '원';
-                    buyDiv.appendChild(buyPriceP);
+                if (priceChange !== 0) {
+                    const buyChangeP = document.createElement('p');
+                    const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
+                    buyChangeP.className = 'price-change ' + changeClass;
                     
-                    if (priceChange !== 0) {
-                        const buyChangeP = document.createElement('p');
-                        const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
-                        buyChangeP.className = 'price-change ' + changeClass;
-                        
-                        const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
-                        const diffAmount = Math.abs(Math.round(priceFor3_75g * priceChange / 100 / 1000) * 1000);
-                        buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(diffAmount);
-                        buyDiv.appendChild(buyChangeP);
-                    }
+                    const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
+                    const diffAmount = Math.abs(Math.round(priceFor3_75g * priceChange / 100 / 1000) * 1000);
+                    buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(diffAmount);
+                    buyDiv.appendChild(buyChangeP);
                 }
                 
                 // 매도가 (팔 때 가격)
