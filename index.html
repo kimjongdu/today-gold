@@ -325,7 +325,7 @@ function renderGoldRates(rates, oldRates) {
         return ((oldRates[symbol] - rates[symbol]) / oldRates[symbol]) * 100;
     }
     
-    // 목표 순금 가격 (3.75g)
+    // 목표 순금 가격 (3.75g, 내가 살 때 기준)
     const targetGoldPrice = 591000;
     
     // 만약 XAU(금) 데이터가 있다면 조정 계수 계산
@@ -336,8 +336,12 @@ function renderGoldRates(rates, oldRates) {
         const currentGoldPricePerGram = rates.XAU / gramsPerOunce;
         const currentGoldPrice375g = currentGoldPricePerGram * 3.75;
         
-        // 목표 가격으로 조정하기 위한 계수 계산
-        adjustmentFactor = targetGoldPrice / currentGoldPrice375g;
+        // VAT 포함된 현재 가격 계산 (제품 정보에서 vatFactor 가져옴)
+        const vatFactor = goldProducts[0].vatFactor; // 순금의 VAT 계수 (1.1)
+        const currentGoldPrice375gWithVAT = currentGoldPrice375g * vatFactor;
+        
+        // 목표 가격으로 조정하기 위한 계수 계산 (VAT 포함 가격 기준)
+        adjustmentFactor = targetGoldPrice / currentGoldPrice375gWithVAT;
         console.log('조정 계수:', adjustmentFactor);
     }
     
@@ -400,7 +404,7 @@ function renderGoldRates(rates, oldRates) {
         buyDiv.className = 'buy-price';
         
         // 순도와 VAT 적용
-        const buyPrice = adjustedPrice375g * product.purityFactor * product.vatFactor;
+        const buyPrice = adjustedPrice375g * product.purityFactor;
         
         if (product.vatFactor > 0) {
             const buyPriceP = document.createElement('p');
