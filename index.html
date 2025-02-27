@@ -325,6 +325,22 @@ function renderGoldRates(rates, oldRates) {
         return ((oldRates[symbol] - rates[symbol]) / oldRates[symbol]) * 100;
     }
     
+    // 목표 순금 가격 (3.75g)
+    const targetGoldPrice = 591000;
+    
+    // 만약 XAU(금) 데이터가 있다면 조정 계수 계산
+    let adjustmentFactor = 1;
+    if (rates.XAU) {
+        // 현재 API에서 받아온 금 가격 (3.75g)
+        const gramsPerOunce = 31.1035;
+        const currentGoldPricePerGram = rates.XAU / gramsPerOunce;
+        const currentGoldPrice375g = currentGoldPricePerGram * 3.75;
+        
+        // 목표 가격으로 조정하기 위한 계수 계산
+        adjustmentFactor = targetGoldPrice / currentGoldPrice375g;
+        console.log('조정 계수:', adjustmentFactor);
+    }
+    
     // 각 제품별 시세 표시
     goldProducts.forEach(function(product) {
         // 금속 시세 계산
@@ -334,14 +350,21 @@ function renderGoldRates(rates, oldRates) {
             return; // 해당 금속 데이터가 없으면 건너뛰기
         }
         
-        // 트로이 온스당 가격을 3.75g 기준으로 변환
-        const gramsPerOunce = 31.1035;
+        // 트로이 온스당 원화 가격
+        console.log(`${product.metal} 1온스 가격:`, rate);
+        
         // 1g당 가격 계산
+        const gramsPerOunce = 31.1035;
         const pricePerGram = rate / gramsPerOunce;
+        console.log(`${product.metal} 1g 가격:`, pricePerGram);
+        
         // 3.75g당 가격 계산
         const price375g = pricePerGram * 3.75;
+        console.log(`${product.metal} 3.75g 가격(조정 전):`, price375g);
         
-        console.log(`${product.metal} 3.75g당 가격(조정 전):`, price375g);
+        // 조정된 가격 계산
+        const adjustedPrice375g = price375g * adjustmentFactor;
+        console.log(`${product.metal} 3.75g 가격(조정 후):`, adjustedPrice375g);
         
         // 변화율 (양수는 가격이 내려갔음을 의미, 음수는 가격이 올랐음을 의미)
         const priceChange = calculateChange(product.apiSymbol);
@@ -377,7 +400,7 @@ function renderGoldRates(rates, oldRates) {
         buyDiv.className = 'buy-price';
         
         // 순도와 VAT 적용
-        const buyPrice = price375g * product.purityFactor * product.vatFactor;
+        const buyPrice = adjustedPrice375g * product.purityFactor * product.vatFactor;
         
         if (product.vatFactor > 0) {
             const buyPriceP = document.createElement('p');
@@ -400,7 +423,7 @@ function renderGoldRates(rates, oldRates) {
         sellDiv.className = 'sell-price';
         
         // 순도와 판매 계수 적용
-        const sellPrice = price375g * product.purityFactor * product.sellFactor;
+        const sellPrice = adjustedPrice375g * product.purityFactor * product.sellFactor;
         
         const sellPriceP = document.createElement('p');
         sellPriceP.className = 'price-value';
