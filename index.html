@@ -136,6 +136,9 @@
         
         // 1트로이온스 = 31.1035g
         const gramsPerOunce = 31.1035;
+        
+        // 목표 가격 설정: 순금 3.75g = 594,000원 (VAT 포함)
+        const TARGET_GOLD_PRICE = 594000;
 
         // 숫자 형식 지정 (천 단위 콤마)
         function formatNumber(num) {
@@ -183,21 +186,20 @@
                     document.getElementById('last-updated').textContent = currentTime;
                     document.getElementById('update-time').textContent = currentTime;
                     
+                    // API 데이터를 목표 가격에 맞게 조정
+                    const adjustedRates = adjustRates(data.rates);
+                    
                     // 변화율 계산을 위해 이전 데이터 저장
                     const oldRates = { ...previousRates };
-                    previousRates = { ...data.rates };
+                    previousRates = { ...adjustedRates };
                     
                     // 로컬 스토리지에 데이터 저장
-                    localStorage.setItem('metalRates', JSON.stringify(data.rates));
+                    localStorage.setItem('metalRates', JSON.stringify(adjustedRates));
                     localStorage.setItem('lastUpdated', currentTime);
                     
-                    // 백업 데이터로 누락된 금속 보완
-                    const backupRates = getBackupRates();
-                    const completeRates = { ...backupRates, ...data.rates };
-                    
                     // 시세 정보 표시
-                    console.log('실제 사용할 시세 데이터:', completeRates);
-                    renderGoldRates(completeRates, oldRates);
+                    console.log('조정된 시세 데이터:', adjustedRates);
+                    renderGoldRates(adjustedRates, oldRates);
                 } else {
                     throw new Error(data.error?.info || '알 수 없는 오류');
                 }
@@ -225,13 +227,52 @@
             }
         }
         
+        // API 데이터를 목표 가격에 맞게 조정
+        function adjustRates(rates) {
+            // API 데이터가 없거나 XAU(금) 데이터가 없으면 백업 데이터 반환
+            if (!rates || !rates.XAU) {
+                return getBackupRates();
+            }
+            
+            console.log('API에서 받은 원본 시세:', rates);
+            
+            // 현재 API 값으로 계산한 3.75g 순금 가격 (VAT 포함)
+            const currentGoldPricePerGram = rates.XAU / gramsPerOunce;
+            const currentGoldPrice3_75g = currentGoldPricePerGram * 3.75 * 1.1; // VAT 10%
+            
+            console.log('API 계산 현재 순금 3.75g 가격 (VAT 포함):', Math.round(currentGoldPrice3_75g), '원');
+            
+            // 목표 가격에 맞도록 조정 계수 계산
+            const adjustmentFactor = TARGET_GOLD_PRICE / currentGoldPrice3_75g;
+            console.log('조정 계수:', adjustmentFactor);
+            
+            // 모든 금속 가격 조정
+            const adjustedRates = {};
+            Object.keys(rates).forEach(metal => {
+                adjustedRates[metal] = rates[metal] * adjustmentFactor;
+            });
+            
+            // 백업 데이터와 병합하여 누락된 금속 보완
+            const backupRates = getBackupRates();
+            const finalRates = { ...backupRates };
+            
+            // API에서 얻은 데이터만 조정된 값으로 덮어쓰기
+            Object.keys(rates).forEach(metal => {
+                finalRates[metal] = adjustedRates[metal];
+            });
+            
+            console.log('최종 조정된 시세:', finalRates);
+            return finalRates;
+        }
+        
         // 백업 데이터 (API 실패 시 사용)
         function getBackupRates() {
+            // 목표: 순금 3.75g = 594,000원 (VAT 포함) 기준으로 역산
+            // VAT 제외 가격: 594,000원 ÷ 1.1 = 540,000원
+            // 1 트로이온스 당 가격: 540,000원 × (31.1035g ÷ 3.75g) = 4,477,904원
             return {
-                // 역산: 594,000원(VAT 포함) ÷ 1.1(VAT 10%) = 540,000원
-                // 540,000원 × (31.1035g ÷ 3.75g) = 4,477,905원 (1 트로이온스당 가격)
-                XAU: 4477905, // 순금 1 트로이 온스당 가격 (VAT 전)
-                XAG: 55000,   // 은 1 트로이 온스당 가격
+                XAU: 4477904, // 순금 1 트로이 온스당 가격
+                XAG: 48883,   // 은 1 트로이 온스당 가격
                 XPT: 2700000  // 백금 1 트로이 온스당 가격
             };
         }
@@ -367,16 +408,15 @@
                 buyPriceP.textContent = formatNumber(priceFor3_75g) + '원';
                 buyDiv.appendChild(buyPriceP);
                 
-                if (priceChange !== 0) {
-                    const buyChangeP = document.createElement('p');
-                    const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
-                    buyChangeP.className = 'price-change ' + changeClass;
-                    
-                    const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
-                    const diffAmount = Math.abs(Math.round(priceFor3_75g * priceChange / 100 / 1000) * 1000);
-                    buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(diffAmount);
-                    buyDiv.appendChild(buyChangeP);
-                }
+                // 변화율이 0이 아닐 때만 표시 (변화가 있을 때)
+                const buyChangeP = document.createElement('p');
+                const buyChangeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
+                buyChangeP.className = 'price-change ' + buyChangeClass;
+                
+                const buyArrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
+                const buyDiffAmount = Math.abs(Math.round(priceFor3_75g * priceChange / 100 / 1000) * 1000);
+                buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + buyArrow + ' ' + formatNumber(buyDiffAmount);
+                buyDiv.appendChild(buyChangeP);
                 
                 // 매도가 (팔 때 가격)
                 const sellDiv = document.createElement('div');
@@ -387,16 +427,15 @@
                 sellPriceP.textContent = formatNumber(sellPrice) + '원';
                 sellDiv.appendChild(sellPriceP);
                 
-                if (priceChange !== 0) {
-                    const sellChangeP = document.createElement('p');
-                    const changeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
-                    sellChangeP.className = 'price-change ' + changeClass;
-                    
-                    const arrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
-                    const sellDiffAmount = Math.abs(Math.round(sellPrice * priceChange / 100 / 1000) * 1000);
-                    sellChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + arrow + ' ' + formatNumber(sellDiffAmount);
-                    sellDiv.appendChild(sellChangeP);
-                }
+                // 변화율 표시 (항상 표시)
+                const sellChangeP = document.createElement('p');
+                const sellChangeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
+                sellChangeP.className = 'price-change ' + sellChangeClass;
+                
+                const sellArrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
+                const sellDiffAmount = Math.abs(Math.round(sellPrice * priceChange / 100 / 1000) * 1000);
+                sellChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + sellArrow + ' ' + formatNumber(sellDiffAmount);
+                sellDiv.appendChild(sellChangeP);
                 
                 if (product.sellNote) {
                     const noteP = document.createElement('p');
