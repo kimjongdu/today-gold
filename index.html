@@ -472,3 +472,27 @@
                     noteP.className = 'note';
                     noteP.textContent = product.sellNote;
                     sellDiv.appendChild(noteP);
+                }
+                
+                row.appendChild(infoDiv);
+                row.appendChild(buyDiv);
+                row.appendChild(sellDiv);
+                container.appendChild(row);
+            });
+            
+            console.log('렌더링 완료');
+        }
+
+        // 초기화 및 주기적 업데이트
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('페이지 로드됨');
+            
+            // 초기 데이터 로드
+            fetchMetalPrices();
+            
+            // 5시간마다 업데이트 (18,000,000ms = 5시간)
+            setInterval(fetchMetalPrices, 18000000);
+        });
+    </script>
+</body>
+</html>
