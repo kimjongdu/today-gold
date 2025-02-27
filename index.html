@@ -248,24 +248,24 @@
                 const data = await response.json();
                 console.log('API 응답 데이터:', data);
                 
-                if (data && data.success) {
-                    // 날짜 업데이트
-                    const currentTime = getCurrentDateTime();
-                    document.getElementById('last-updated').textContent = currentTime;
-                    document.getElementById('update-time').textContent = currentTime;
-                    
-                    // 변화율 계산을 위해 이전 데이터 저장
-                    const oldRates = { ...previousRates };
-                    previousRates = { ...data.rates };
-                    
-                    // 로컬 스토리지에 데이터 저장
-                    localStorage.setItem('metalRates', JSON.stringify(data.rates));
-                    localStorage.setItem('lastUpdated', currentTime);
-                    
-                    // 시세 정보 표시
-                    console.log('API 시세 데이터:', data.rates);
-                    renderGoldRates(data.rates, oldRates);
-                } else {
+if (data && data.success) {
+    // 날짜 업데이트
+    const currentTime = getCurrentDateTime();
+    document.getElementById('last-updated').textContent = currentTime;
+    document.getElementById('update-time').textContent = currentTime;
+    
+    // 변화율 계산을 위해 이전 데이터 저장
+    const oldRates = { ...previousRates };
+    previousRates = { ...data.rates };
+    
+    // 로컬 스토리지에 데이터 저장
+    localStorage.setItem('metalRates', JSON.stringify(data.rates));
+    localStorage.setItem('lastUpdated', currentTime);
+    
+    // 시세 정보 표시
+    console.log('API 시세 데이터:', data.rates);
+    renderGoldRates(data.rates, oldRates);
+} else {
                     throw new Error(data.error?.info || '알 수 없는 오류');
                 }
             } catch (error) {
@@ -450,25 +450,27 @@
                     infoDiv.appendChild(useP);
                 }
                 
-                // 매수가 (살 때 가격)
-                const buyDiv = document.createElement('div');
-                buyDiv.className = 'buy-price';
-                
-                // 모든 금속에 대해 매수가 표시 (18K, 14K 포함)
-                const buyPriceP = document.createElement('p');
-                buyPriceP.className = 'price-value';
-                buyPriceP.textContent = formatNumber(buyPrice) + '원';
-                buyDiv.appendChild(buyPriceP);
-                
-                // 변화율 표시 (항상 표시)
-                const buyChangeP = document.createElement('p');
-                const buyChangeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
-                buyChangeP.className = 'price-change ' + buyChangeClass;
-                
-                const buyArrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
-                const buyDiffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
-                buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + buyArrow + ' ' + formatNumber(buyDiffAmount);
-                buyDiv.appendChild(buyChangeP);
+// 매수가 (살 때 가격)
+const buyDiv = document.createElement('div');
+buyDiv.className = 'buy-price';
+
+console.log(`${product.metal} DOM 요소 생성 시작`); // 디버깅 로그 추가
+
+// 모든 금속에 대해 매수가 표시 (조건문 제거)
+const buyPriceP = document.createElement('p');
+buyPriceP.className = 'price-value';
+buyPriceP.textContent = formatNumber(buyPrice) + '원';
+buyDiv.appendChild(buyPriceP);
+
+// 변화율 표시 (항상 표시)
+const buyChangeP = document.createElement('p');
+const buyChangeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
+buyChangeP.className = 'price-change ' + buyChangeClass;
+
+const buyArrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
+const buyDiffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
+buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + buyArrow + ' ' + formatNumber(buyDiffAmount);
+buyDiv.appendChild(buyChangeP);
                 
                 // 매도가 (팔 때 가격)
                 const sellDiv = document.createElement('div');
@@ -495,6 +497,14 @@
                     noteP.textContent = product.sellNote;
                     sellDiv.appendChild(noteP);
                 }
+
+console.log(`${product.metal} DOM 요소 생성 완료`);
+console.log(row); // 실제 생성된 row 요소 확인
+
+row.appendChild(infoDiv);
+row.appendChild(buyDiv);
+row.appendChild(sellDiv);
+container.appendChild(row);
                 
                 row.appendChild(infoDiv);
                 row.appendChild(buyDiv);
