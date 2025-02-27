@@ -100,8 +100,27 @@
         .footer p {
             margin: 5px 0;
         }
+        .chart-container {
+            margin-top: 40px;
+            border-top: 1px solid #333;
+            padding-top: 20px;
+        }
+        .chart-title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        .ad-container {
+            margin: 20px 0;
+            min-height: 90px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXX" crossorigin="anonymous"></script>
 </head>
 <body>
     <div class="container">
@@ -116,6 +135,44 @@
         
         <div id="gold-rates">
             <div style="text-align: center; padding: 20px; color: #aaa;">데이터를 불러오는 중...</div>
+        </div>
+        
+        <!-- AdSense 광고 -->
+        <div class="ad-container">
+            <ins class="adsbygoogle"
+                 style="display:block; width:728px; height:90px"
+                 data-ad-client="ca-pub-XXXXXXXXXXXX"
+                 data-ad-slot="XXXXXXXXXX"></ins>
+            <script>
+                 (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
+        </div>
+        
+        <!-- TradingView 위젯 - 금 시세 차트 -->
+        <div class="chart-container">
+            <p class="chart-title">국제 금 시세 차트 (참고용)</p>
+            <div class="tradingview-widget-container">
+                <div id="tradingview_widget"></div>
+                <script src="https://s3.tradingview.com/tv.js" type="text/javascript"></script>
+                <script type="text/javascript">
+                    new TradingView.widget({
+                        "width": "100%",
+                        "height": 400,
+                        "symbol": "TVC:GOLD",
+                        "interval": "D",
+                        "timezone": "Asia/Seoul",
+                        "theme": "dark",
+                        "style": "1",
+                        "locale": "kr",
+                        "toolbar_bg": "#f1f3f6",
+                        "enable_publishing": false,
+                        "hide_top_toolbar": true,
+                        "hide_legend": false,
+                        "save_image": false,
+                        "container_id": "tradingview_widget"
+                    });
+                </script>
+            </div>
         </div>
         
         <div class="footer">
@@ -394,20 +451,23 @@
                 const buyDiv = document.createElement('div');
                 buyDiv.className = 'buy-price';
                 
-                const buyPriceP = document.createElement('p');
-                buyPriceP.className = 'price-value';
-                buyPriceP.textContent = formatNumber(buyPrice) + '원';
-                buyDiv.appendChild(buyPriceP);
-                
-                // 변화율 표시 (항상 표시)
-                const buyChangeP = document.createElement('p');
-                const buyChangeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
-                buyChangeP.className = 'price-change ' + buyChangeClass;
-                
-                const buyArrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
-                const buyDiffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
-                buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + buyArrow + ' ' + formatNumber(buyDiffAmount);
-                buyDiv.appendChild(buyChangeP);
+                // 18K, 14K 금시세는 매수가를 표시하지 않음
+                if (product.metal !== '18K 금시세' && product.metal !== '14K 금시세') {
+                    const buyPriceP = document.createElement('p');
+                    buyPriceP.className = 'price-value';
+                    buyPriceP.textContent = formatNumber(buyPrice) + '원';
+                    buyDiv.appendChild(buyPriceP);
+                    
+                    // 변화율 표시 (항상 표시)
+                    const buyChangeP = document.createElement('p');
+                    const buyChangeClass = priceChange < 0 ? 'down' : (priceChange > 0 ? 'up' : 'no-change');
+                    buyChangeP.className = 'price-change ' + buyChangeClass;
+                    
+                    const buyArrow = priceChange < 0 ? '▼' : (priceChange > 0 ? '▲' : '-');
+                    const buyDiffAmount = Math.abs(Math.round(buyPrice * priceChange / 100 / 1000) * 1000);
+                    buyChangeP.textContent = Math.abs(priceChange).toFixed(2) + '% ' + buyArrow + ' ' + formatNumber(buyDiffAmount);
+                    buyDiv.appendChild(buyChangeP);
+                }
                 
                 // 매도가 (팔 때 가격)
                 const sellDiv = document.createElement('div');
